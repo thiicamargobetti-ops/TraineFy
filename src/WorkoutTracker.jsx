@@ -835,7 +835,6 @@ export default function WorkoutTracker({ userId, userEmail }) {
           loadHistoryFromCloud(userId),
         ]);
         if (cloudWorkouts) {
-          // Migra restTime nos dados vindos da nuvem
           Object.keys(cloudWorkouts).forEach(day => {
             cloudWorkouts[day] = cloudWorkouts[day].map(ex =>
               ex.restTime == null ? { ...ex, restTime: 90 } : ex
@@ -846,6 +845,12 @@ export default function WorkoutTracker({ userId, userEmail }) {
         if (cloudHistory) setHistory(cloudHistory);
       } catch (e) {
         console.warn("Erro ao carregar da nuvem, usando dados locais:", e);
+      }
+      // Restaura sessão ativa se havia uma em andamento (app fechado durante treino)
+      const savedTs = storage.get(SESSION_START_KEY);
+      if (savedTs && Number(savedTs) > 0) {
+        setSessionStartTs(Number(savedTs));
+        setSessionActive(true);
       }
       setHydrated(true);
     }
@@ -966,31 +971,35 @@ export default function WorkoutTracker({ userId, userEmail }) {
 
       {/* Header */}
       <div style={{ padding: "20px 20px 0" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 13, fontWeight: 800, color: "#a3e635", letterSpacing: "2px" }}>TRAINEFY</span>
-              <span style={{ fontSize: 10, color: "#374151", fontWeight: 500 }}>{userEmail}</span>
-              <span style={{ fontSize: 10, color: "#a3e635", opacity: savedFlash ? 1 : 0, transition: "opacity 0.3s", fontWeight: 600 }}>✓ salvo</span>
-            </div>
-            <h1 style={{ margin: "2px 0 0", fontSize: 28, fontWeight: 800, color: "#f9fafb", lineHeight: 1.1 }}>
-              {isRest ? "Descanso" : dayKey}
-            </h1>
+        {/* Top row: logo + actions */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: "#a3e635", letterSpacing: "2px" }}>TRAINEFY</span>
+            <span style={{ fontSize: 10, color: "#a3e635", opacity: savedFlash ? 1 : 0, transition: "opacity 0.3s", fontWeight: 600 }}>✓ salvo</span>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <button onClick={() => setShowHistory(true)} style={{ background: "#1f2937", border: "none", borderRadius: 10, padding: "8px 12px", cursor: "pointer", color: "#9ca3af", fontSize: 13, fontWeight: 600 }}>
               📊 Histórico
             </button>
-            <button onClick={() => supabase.auth.signOut()} style={{ background: "none", border: "none", borderRadius: 10, padding: "8px 8px", cursor: "pointer", color: "#374151", fontSize: 12, fontWeight: 600 }}>
+            <button onClick={() => supabase.auth.signOut()} style={{ background: "none", border: "none", padding: "8px 4px", cursor: "pointer", color: "#374151", fontSize: 12, fontWeight: 600 }}>
               Sair
             </button>
-            {exercises.length > 0 && (
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 20, fontWeight: 700, color: "#a3e635" }}>{doneCount}/{exercises.length}</div>
-                <div style={{ fontSize: 10, color: "#4b5563" }}>exercícios</div>
-              </div>
-            )}
           </div>
+        </div>
+        {/* Title row */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+          <div>
+            <p style={{ margin: "0 0 2px", fontSize: 11, color: "#4b5563", fontWeight: 500 }}>{userEmail}</p>
+            <h1 style={{ margin: 0, fontSize: 32, fontWeight: 800, color: "#f9fafb", lineHeight: 1 }}>
+              {isRest ? "Descanso" : dayKey}
+            </h1>
+          </div>
+          {exercises.length > 0 && (
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: "#a3e635" }}>{doneCount}/{exercises.length}</div>
+              <div style={{ fontSize: 10, color: "#4b5563" }}>exercícios</div>
+            </div>
+          )}
         </div>
 
         {/* Stats row */}
