@@ -164,46 +164,14 @@ function makeEx(name, group, sets, reps, unit = "kg", restTime = 90) {
   return { id: genId(), name, group, sets, reps, unit, restTime, weight: null, setWeights: Array(sets).fill(""), done: [] };
 }
 
-const DEFAULT_WORKOUTS = {
-  Seg: [
-    makeEx("Rosca Direta com Barra", "Bíceps", 4, 12),
-    makeEx("Rosca Inclinada com Halteres", "Bíceps", 3, 15),
-    makeEx("Tríceps Testa com Halteres", "Tríceps", 4, 10),
-    makeEx("Pushdown no Cabo (Barra Reta)", "Tríceps", 3, 15),
-    makeEx("Elevação Sentado (Seated Calf Raise)", "Panturrilha", 3, 15),
-    makeEx("Crunch no Cabo", "Core", 3, 12),
-  ],
-  Ter: [
-    makeEx("Supino Inclinado com Barra", "Peito", 4, 10),
-    makeEx("Peck Deck (Fly na Máquina)", "Peito", 3, 15),
-    makeEx("Crossover Baixo (Cabo)", "Peito", 3, 15),
-    makeEx("Desenvolvimento com Halteres", "Ombros", 4, 12),
-    makeEx("Elevação Lateral no Cabo", "Ombros", 3, 15),
-    makeEx("Leg Press 45°", "Quadríceps", 4, 12),
-    makeEx("Woodchop no Cabo", "Core", 3, 12),
-  ],
-  Qua: [
-    makeEx("Pulldown (Puxada Frontal)", "Costas", 4, 10),
-    makeEx("Remada Baixa no Cabo (Seated Row)", "Costas", 4, 12),
-    makeEx("Stiff", "Post. Coxa", 4, 10),
-    makeEx("Hip Thrust com Barra", "Glúteos", 4, 12),
-    makeEx("Face Pull no Cabo", "Ombros", 3, 15),
-    makeEx("Encolhimento com Halteres", "Trapézio", 3, 12),
-    makeEx("Rosca de Punho (Wrist Curl)", "Antebraço", 2, 15),
-    makeEx("Crunch no Cabo", "Core", 3, 12),
-  ],
-};
-DEFAULT_WORKOUTS.Qui = DEFAULT_WORKOUTS.Seg.map(e => ({ ...e, id: genId(), setWeights: [...e.setWeights], done: [] }));
-DEFAULT_WORKOUTS.Sex = DEFAULT_WORKOUTS.Ter.map(e => ({ ...e, id: genId(), setWeights: [...e.setWeights], done: [] }));
-DEFAULT_WORKOUTS.Sáb = [];
-DEFAULT_WORKOUTS.Dom = [];
+// Todos os dias começam vazios — cada usuário monta o próprio treino
+const DEFAULT_WORKOUTS = WEEKDAYS.reduce((acc, d) => ({ ...acc, [d]: [] }), {});
 
 function loadWorkouts() {
   try {
     const s = storage.get(STORAGE_KEY);
     if (s) {
       const saved = JSON.parse(s);
-      // Migrate: add restTime: 90 to any exercise that was saved before this field existed
       Object.keys(saved).forEach(day => {
         saved[day] = saved[day].map(ex =>
           ex.restTime == null ? { ...ex, restTime: 90 } : ex
@@ -212,7 +180,7 @@ function loadWorkouts() {
       return saved;
     }
   } catch (_) {}
-  return { ...WEEKDAYS.reduce((a, d) => ({ ...a, [d]: [] }), {}), ...DEFAULT_WORKOUTS };
+  return { ...DEFAULT_WORKOUTS };
 }
 function loadHistory() {
   try { const s = storage.get(HISTORY_KEY); if (s) return JSON.parse(s); } catch (_) {}
