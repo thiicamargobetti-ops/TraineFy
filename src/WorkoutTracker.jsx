@@ -782,6 +782,198 @@ function HistoryScreen({ onClose }) {
   );
 }
 
+// ── IMPORT SCREEN ─────────────────────────────────────────────────────────
+function ImportScreen({ onClose, onImport }) {
+  const [dragging, setDragging] = useState(false);
+  const [status, setStatus] = useState(null); // null | 'success' | 'error'
+  const [message, setMessage] = useState("");
+  const fileRef = useRef(null);
+
+  function downloadTemplate() {
+    const header = "Dia,Exercício,Grupo,Séries,Reps,Carga (kg),Descanso (seg)";
+    const rows = [
+      "Seg,Supino Reto com Barra,Peito,4,10,60,90",
+      "Seg,Rosca Direta com Barra,Bíceps,3,12,40,60",
+      "Ter,Pulldown (Puxada Frontal),Costas,4,10,55,90",
+      "Ter,Desenvolvimento com Halteres,Ombros,3,12,20,60",
+      "Qua,Agachamento Livre com Barra,Quadríceps,4,8,80,120",
+      "Qua,Hip Thrust com Barra,Glúteos,4,12,60,90",
+    ];
+    const csv = [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "trainefy_modelo.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function parseCSV(text) {
+    const lines = text.trim().split("\n").filter(l => l.trim());
+    if (lines.length < 2) throw new Error("Arquivo vazio ou sem dados.");
+
+    // Detect separator
+    const sep = lines[0].includes(";") ? ";" : ",";
+    const headers = lines[0].split(sep).map(h => h.trim().toLowerCase());
+
+    const dayIdx = headers.findIndex(h => h.includes("dia"));
+    const nameIdx = headers.findIndex(h => h.includes("exerc"));
+    const groupIdx = headers.findIndex(h => h.includes("grupo"));
+    const setsIdx = headers.findIndex(h => h.includes("sér") || h.includes("serie"));
+    const repsIdx = headers.findIndex(h => h.includes("rep"));
+    const weightIdx = headers.findIndex(h => h.includes("carga") || h.includes("kg"));
+    const restIdx = headers.findIndex(h => h.includes("descanso") || h.includes("seg"));
+
+    if (dayIdx === -1 || nameIdx === -1) throw new Error("Colunas 'Dia' e 'Exercício' são obrigatórias.");
+
+    const WEEKDAYS_PT = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+    const workouts = WEEKDAYS_PT.reduce((acc, d) => ({ ...acc, [d]: [] }), {});
+
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(sep).map(c => c.trim().replace(/^"|"$/g, ""));
+      const day = cols[dayIdx];
+      if (!WEEKDAYS_PT.includes(day)) continue;
+
+      const name = cols[nameIdx] || "";
+      const group = groupIdx !== -1 ? cols[groupIdx] : "Core";
+      const sets = setsIdx !== -1 ? Math.max(1, parseInt(cols[setsIdx]) || 3) : 3;
+      const reps = repsIdx !== -1 ? Math.max(1, parseInt(cols[repsIdx]) || 12) : 12;
+      const weight = weightIdx !== -1 ? parseFloat(cols[weightIdx]) || null : null;
+      const restTime = restIdx !== -1 ? parseInt(cols[restIdx]) || 90 : 90;
+
+      if (!name) continue;
+
+      workouts[day].push({
+        id: Math.random().toString(36).slice(2, 9),
+        name, group, sets, reps, unit: "kg", weight, restTime,
+        setWeights: Array(sets).fill(weight ? String(weight) : ""),
+        done: [],
+      });
+    }
+
+    const total = Object.values(workouts).reduce((s, arr) => s + arr.length, 0);
+    if (total === 0) throw new Error("Nenhum exercício encontrado. Verifique os dias (Seg, Ter, Qua...).");
+    return { workouts, total };
+  }
+
+  function handleFile(file) {
+    if (!file) return;
+    if (!file.name.endsWith(".csv") && !file.name.endsWith(".txt")) {
+      setStatus("error"); setMessage("Use um arquivo .csv"); return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const { workouts, total } = parseCSV(e.target.result);
+        setStatus("success");
+        setMessage(`${total} exercício${total > 1 ? "s" : ""} importado${total > 1 ? "s" : ""} com sucesso!`);
+        setTimeout(() => onImport(workouts), 1200);
+      } catch (err) {
+        setStatus("error"); setMessage(err.message);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#0a0f1a", fontFamily: "system-ui, sans-serif" }}>
+      {/* Header */}
+      <div style={{ padding: "20px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+        <div>
+          <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: "#a3e635", letterSpacing: "3px" }}>TRAINEFY</p>
+          <h1 style={{ margin: "4px 0 0", fontSize: 26, fontWeight: 800, color: "#f9fafb" }}>Importar treino</h1>
+        </div>
+        <button onClick={onClose} style={{ background: "#1f2937", border: "none", borderRadius: 10, padding: "10px 16px", cursor: "pointer", color: "#9ca3af", fontSize: 13, fontWeight: 600 }}>← Voltar</button>
+      </div>
+
+      <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 16 }}>
+        {/* Step 1 — Download template */}
+        <div style={{ background: "#111827", borderRadius: 16, padding: 20, border: "1px solid #1f2937" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <span style={{ background: "#a3e63522", color: "#a3e635", fontSize: 12, fontWeight: 800, padding: "3px 8px", borderRadius: 20 }}>Passo 1</span>
+            <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#f9fafb" }}>Baixe o modelo</p>
+          </div>
+          <p style={{ margin: "0 0 16px", fontSize: 13, color: "#6b7280", lineHeight: 1.6 }}>
+            Baixe a planilha modelo em CSV, preencha com seus treinos e faça o upload abaixo. Use os dias exatos: <strong style={{ color: "#d1d5db" }}>Seg, Ter, Qua, Qui, Sex, Sáb, Dom</strong>.
+          </p>
+          <button onClick={downloadTemplate} style={{ width: "100%", background: "#1f2937", border: "1.5px solid #374151", borderRadius: 12, padding: "14px 0", cursor: "pointer", color: "#a3e635", fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <span style={{ fontSize: 18 }}>⬇️</span> Baixar modelo CSV
+          </button>
+        </div>
+
+        {/* Step 2 — Upload */}
+        <div style={{ background: "#111827", borderRadius: 16, padding: 20, border: "1px solid #1f2937" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <span style={{ background: "#3b82f622", color: "#3b82f6", fontSize: 12, fontWeight: 800, padding: "3px 8px", borderRadius: 20 }}>Passo 2</span>
+            <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#f9fafb" }}>Envie o arquivo preenchido</p>
+          </div>
+          <p style={{ margin: "0 0 16px", fontSize: 13, color: "#6b7280", lineHeight: 1.6 }}>
+            Selecione o arquivo .csv preenchido. Os treinos existentes serão substituídos.
+          </p>
+
+          {/* Drop zone */}
+          <div
+            onDragOver={e => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={e => { e.preventDefault(); setDragging(false); handleFile(e.dataTransfer.files[0]); }}
+            onClick={() => fileRef.current?.click()}
+            style={{
+              border: `2px dashed ${dragging ? "#a3e635" : "#374151"}`,
+              borderRadius: 12, padding: "32px 20px",
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
+              cursor: "pointer", transition: "border-color 0.2s",
+              background: dragging ? "#a3e63511" : "transparent",
+            }}
+          >
+            <span style={{ fontSize: 32 }}>📂</span>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#9ca3af" }}>Toque para selecionar o arquivo</p>
+            <p style={{ margin: 0, fontSize: 12, color: "#4b5563" }}>Apenas .csv</p>
+          </div>
+          <input ref={fileRef} type="file" accept=".csv,.txt" onChange={e => handleFile(e.target.files[0])} style={{ display: "none" }} />
+
+          {/* Status */}
+          {status && (
+            <div style={{ marginTop: 14, padding: "12px 16px", borderRadius: 10, background: status === "success" ? "#a3e63522" : "#ef444422", border: `1px solid ${status === "success" ? "#a3e635" : "#ef4444"}` }}>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: status === "success" ? "#a3e635" : "#ef4444" }}>
+                {status === "success" ? "✓ " : "✕ "}{message}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Format reference */}
+        <div style={{ background: "#111827", borderRadius: 16, padding: 20, border: "1px solid #1f2937" }}>
+          <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "1px" }}>Formato esperado</p>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <thead>
+                <tr>
+                  {["Dia", "Exercício", "Grupo", "Séries", "Reps", "Carga (kg)", "Descanso (seg)"].map(h => (
+                    <th key={h} style={{ padding: "6px 10px", background: "#1f2937", color: "#6b7280", fontWeight: 700, textAlign: "left", whiteSpace: "nowrap" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  ["Seg", "Supino Reto", "Peito", "4", "10", "60", "90"],
+                  ["Ter", "Pulldown", "Costas", "4", "10", "55", "90"],
+                ].map((row, i) => (
+                  <tr key={i}>
+                    {row.map((cell, j) => (
+                      <td key={j} style={{ padding: "6px 10px", color: "#9ca3af", borderTop: "1px solid #1f2937", whiteSpace: "nowrap" }}>{cell}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── MAIN APP ──────────────────────────────────────────────────────────────
 export default function WorkoutTracker({ userId, userEmail }) {
   const [hydrated, setHydrated] = useState(false);
@@ -793,6 +985,8 @@ export default function WorkoutTracker({ userId, userEmail }) {
   const [sessionActive, setSessionActive] = useState(false);
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const [history, setHistory] = useState(loadHistory);
   const saveTimeoutRef = useRef(null);
 
@@ -947,37 +1141,59 @@ export default function WorkoutTracker({ userId, userEmail }) {
   );
 
   if (showHistory) return <HistoryScreen onClose={() => setShowHistory(false)} />;
+  if (showImport) return <ImportScreen onClose={() => setShowImport(false)} onImport={(data) => { setWorkouts(data); setShowImport(false); }} />;
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0f1a", fontFamily: "system-ui, -apple-system, sans-serif", paddingBottom: 120, maxWidth: 480, margin: "0 auto" }}>
 
       {/* Header */}
       <div style={{ padding: "20px 20px 0" }}>
-        {/* Top row: logo + actions */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span onClick={handleLogoClick} style={{ fontSize: 13, fontWeight: 800, color: "#a3e635", letterSpacing: "2px", cursor: "default", userSelect: "none" }}>TRAINEFY</span>
-            <span style={{ fontSize: 10, color: "#a3e635", opacity: savedFlash ? 1 : 0, transition: "opacity 0.3s", fontWeight: 600 }}>✓ salvo</span>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          {/* Logo */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span onClick={handleLogoClick} style={{ fontSize: 22, fontWeight: 900, color: "#a3e635", letterSpacing: "3px", cursor: "default", userSelect: "none", lineHeight: 1 }}>TRAINEFY</span>
+              <span style={{ fontSize: 10, color: "#a3e635", opacity: savedFlash ? 1 : 0, transition: "opacity 0.3s", fontWeight: 600 }}>✓ salvo</span>
+            </div>
+            <span style={{ fontSize: 11, color: "#4b5563", fontWeight: 400 }}>{userEmail}</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <button onClick={() => setShowHistory(true)} style={{ background: "#1f2937", border: "none", borderRadius: 10, padding: "8px 12px", cursor: "pointer", color: "#9ca3af", fontSize: 13, fontWeight: 600 }}>
-              📊 Histórico
+
+          {/* Menu ⋯ */}
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => setShowMenu(v => !v)}
+              style={{ background: showMenu ? "#374151" : "#1f2937", border: "1px solid #374151", borderRadius: 10, width: 44, height: 44, cursor: "pointer", color: "#9ca3af", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.15s" }}
+            >
+              ⋯
             </button>
-            <button onClick={() => supabase.auth.signOut()} style={{ background: "none", border: "none", padding: "8px 4px", cursor: "pointer", color: "#374151", fontSize: 12, fontWeight: 600 }}>
-              Sair
-            </button>
+            {showMenu && (
+              <>
+                <div onClick={() => setShowMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 10 }} />
+                <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 20, background: "#1f2937", borderRadius: 14, border: "1px solid #374151", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", minWidth: 180 }}>
+                  <button onClick={() => { setShowHistory(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+                    <span style={{ fontSize: 16 }}>📊</span> Histórico
+                  </button>
+                  <div style={{ height: 1, background: "#374151" }} />
+                  <button onClick={() => { setShowImport(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+                    <span style={{ fontSize: 16 }}>📥</span> Importar treino
+                  </button>
+                  <div style={{ height: 1, background: "#374151" }} />
+                  <button onClick={() => supabase.auth.signOut()} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#ef4444", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+                    <span style={{ fontSize: 16 }}>→</span> Sair
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
-        {/* Title row */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-          <div>
-            <p style={{ margin: "0 0 2px", fontSize: 11, color: "#4b5563", fontWeight: 500 }}>{userEmail}</p>
-            <h1 style={{ margin: 0, fontSize: 32, fontWeight: 800, color: "#f9fafb", lineHeight: 1 }}>
-              {isRest ? "Descanso" : dayKey}
-            </h1>
-          </div>
+
+        {/* Day title + counter */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 8 }}>
+          <h1 style={{ margin: 0, fontSize: 36, fontWeight: 800, color: "#f9fafb", lineHeight: 1 }}>
+            {isRest ? "Descanso" : dayKey}
+          </h1>
           {exercises.length > 0 && (
-            <div style={{ textAlign: "right" }}>
+            <div style={{ textAlign: "right", paddingBottom: 2 }}>
               <div style={{ fontSize: 20, fontWeight: 700, color: "#a3e635" }}>{doneCount}/{exercises.length}</div>
               <div style={{ fontSize: 10, color: "#4b5563" }}>exercícios</div>
             </div>
@@ -985,7 +1201,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
         </div>
 
         {/* Stats row */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8, marginBottom: 4 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
           {volume > 0
             ? <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>Volume: <strong style={{ color: "#a3e635" }}>{Math.round(volume)}kg</strong></p>
             : <span />}
