@@ -293,7 +293,7 @@ function PickerModal({ onClose, onAdd }) {
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.75)", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-      <div style={{ background: "#111827", borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, margin: "0 auto", padding: "20px 20px 40px", maxHeight: "85vh", overflowY: "auto" }}>
+      <div style={{ background: "#111827", borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, margin: "0 auto", padding: "20px 20px 40px", maxHeight: "92vh", overflowY: "auto", paddingBottom: "env(safe-area-inset-bottom, 40px)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <span style={{ fontSize: 18, fontWeight: 700, color: "#f9fafb" }}>
             {mode === "custom" ? (customStep === "form" ? "Exercício personalizado" : customName) : (!group ? "Escolha o grupo" : !exName ? group : group)}
@@ -670,9 +670,17 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
 }
 
 // ── HISTORY SCREEN ───────────────────────────────────────────────────────
-function HistoryScreen({ onClose }) {
-  const [history] = useState(loadHistory);
+function HistoryScreen({ onClose, onDelete }) {
+  const [history, setHistoryLocal] = useState(loadHistory);
   const [selectedEx, setSelectedEx] = useState(null);
+
+  function deleteSession(indexFromEnd) {
+    const realIndex = history.length - 1 - indexFromEnd;
+    const updated = history.filter((_, i) => i !== realIndex);
+    setHistoryLocal(updated);
+    saveHistory(updated);
+    if (onDelete) onDelete(updated);
+  }
 
   const allExNames = [...new Set(history.flatMap(s => s.exercises.map(e => e.name)))].sort();
   const chartData = selectedEx
@@ -751,9 +759,12 @@ function HistoryScreen({ onClose }) {
                     <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#f9fafb" }}>{session.date}</p>
                     <p style={{ margin: "2px 0 0", fontSize: 12, color: "#6b7280" }}>⏱ {session.duration} · 📦 {Math.round(session.volume)}kg volume</p>
                   </div>
-                  <span style={{ background: "#1f2937", borderRadius: 20, padding: "4px 10px", fontSize: 12, color: "#6b7280" }}>
-                    {session.exercises.length} exercícios
-                  </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ background: "#1f2937", borderRadius: 20, padding: "4px 10px", fontSize: 12, color: "#6b7280" }}>
+                      {session.exercises.length} exercícios
+                    </span>
+                    <button onClick={() => deleteSession(i)} style={{ background: "none", border: "none", color: "#374151", cursor: "pointer", fontSize: 18, padding: "4px", lineHeight: 1, flexShrink: 0 }}>🗑️</button>
+                  </div>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   {session.exercises.map((ex, j) => {
@@ -797,6 +808,65 @@ function Copyright() {
     }}>
       Criado por Thiago Camargo Betti
     </p>
+  );
+}
+
+// ── RESET SCREEN ──────────────────────────────────────────────────────────
+function ResetScreen({ onClose, onReset }) {
+  const [confirm, setConfirm] = useState(false);
+  const [done, setDone] = useState(false);
+
+  function handleReset() {
+    if (!confirm) { setConfirm(true); return; }
+    onReset();
+    setDone(true);
+    setTimeout(() => onClose(), 1500);
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#0a0f1a", fontFamily: "system-ui, sans-serif" }}>
+      <div style={{ padding: "20px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+        <div>
+          <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: "#a3e635", letterSpacing: "3px" }}>TRAINEFY</p>
+          <h1 style={{ margin: "4px 0 0", fontSize: 26, fontWeight: 800, color: "#f9fafb" }}>Zerar dados</h1>
+        </div>
+        <button onClick={onClose} style={{ background: "#1f2937", border: "none", borderRadius: 10, padding: "10px 16px", cursor: "pointer", color: "#9ca3af", fontSize: 13, fontWeight: 600 }}>← Voltar</button>
+      </div>
+
+      <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 16 }}>
+        <div style={{ background: "#111827", borderRadius: 16, padding: 20, border: "1px solid #ef444433" }}>
+          <p style={{ margin: "0 0 8px", fontSize: 16, fontWeight: 700, color: "#f9fafb" }}>⚠️ Atenção</p>
+          <p style={{ margin: "0 0 16px", fontSize: 14, color: "#6b7280", lineHeight: 1.6 }}>
+            Esta ação irá apagar <strong style={{ color: "#f9fafb" }}>todos os treinos e histórico</strong> permanentemente. Não é possível desfazer.
+          </p>
+
+          {done ? (
+            <div style={{ padding: "14px", background: "#a3e63522", borderRadius: 10, border: "1px solid #a3e635", textAlign: "center" }}>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#a3e635" }}>✓ Dados zerados com sucesso</p>
+            </div>
+          ) : (
+            <>
+              {confirm && (
+                <div style={{ padding: "12px 14px", background: "#ef444422", borderRadius: 10, border: "1px solid #ef4444", marginBottom: 12 }}>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#ef4444" }}>Tem certeza? Toque novamente para confirmar.</p>
+                </div>
+              )}
+              <button onClick={handleReset} style={{
+                width: "100%", background: confirm ? "#ef4444" : "#1f2937",
+                border: `1.5px solid ${confirm ? "#ef4444" : "#374151"}`,
+                borderRadius: 12, padding: "15px 0", cursor: "pointer",
+                fontSize: 15, fontWeight: 800,
+                color: confirm ? "#fff" : "#ef4444",
+                transition: "all 0.2s",
+              }}>
+                {confirm ? "✕ Confirmar exclusão" : "Apagar todos os dados"}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+      <Copyright />
+    </div>
   );
 }
 
@@ -1005,9 +1075,10 @@ export default function WorkoutTracker({ userId, userEmail }) {
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showReset, setShowReset] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [history, setHistory] = useState(loadHistory);
-  const saveTimeoutRef = useRef(null);
+  useEffect(() => { setShowMenu(false); }, [activeDay]);
 
   // Carrega dados da nuvem ao montar. Dados da nuvem têm prioridade sobre local.
   useEffect(() => {
@@ -1159,8 +1230,17 @@ export default function WorkoutTracker({ userId, userEmail }) {
     </div>
   );
 
-  if (showHistory) return <HistoryScreen onClose={() => setShowHistory(false)} />;
+  if (showHistory) return <HistoryScreen onClose={() => setShowHistory(false)} onDelete={(updated) => { setHistory(updated); saveHistoryToCloud(userId, updated).catch(() => {}); }} />;
   if (showImport) return <ImportScreen onClose={() => setShowImport(false)} onImport={(data) => { setWorkouts(data); setShowImport(false); }} />;
+  if (showReset) return <ResetScreen onClose={() => setShowReset(false)} onReset={(w, h) => { setWorkouts(w); setHistory(h); saveWorkoutsToCloud(userId, w).catch(()=>{}); saveHistoryToCloud(userId, h).catch(()=>{}); }} />;
+  if (showReset) return <ResetScreen onClose={() => setShowReset(false)} onReset={() => {
+    const empty = WEEKDAYS.reduce((acc, d) => ({ ...acc, [d]: [] }), {});
+    setWorkouts(empty);
+    setHistory([]);
+    saveHistory([]);
+    saveWorkoutsToCloud(userId, empty).catch(() => {});
+    saveHistoryToCloud(userId, []).catch(() => {});
+  }} />;
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0f1a", fontFamily: "system-ui, -apple-system, sans-serif", paddingBottom: 120, maxWidth: 480, margin: "0 auto" }}>
@@ -1187,7 +1267,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
             </button>
             {showMenu && (
               <>
-                <div onClick={() => setShowMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 10 }} />
+                <div onClick={() => setShowMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 10, WebkitTapHighlightColor: "transparent" }} />
                 <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 20, background: "#1f2937", borderRadius: 14, border: "1px solid #374151", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", minWidth: 180 }}>
                   <button onClick={() => { setShowHistory(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
                     <span style={{ fontSize: 16 }}>📊</span> Histórico
@@ -1197,7 +1277,15 @@ export default function WorkoutTracker({ userId, userEmail }) {
                     <span style={{ fontSize: 16 }}>📥</span> Importar treino
                   </button>
                   <div style={{ height: 1, background: "#374151" }} />
-                  <button onClick={() => supabase.auth.signOut()} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#ef4444", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+                  <button onClick={() => { setShowReset(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#ef4444", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+                    <span style={{ fontSize: 16 }}>🗑️</span> Zerar dados
+                  </button>
+                  <div style={{ height: 1, background: "#374151" }} />
+                  <button onClick={() => { setShowReset(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#ef4444", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+                    <span style={{ fontSize: 16 }}>🗑️</span> Zerar dados
+                  </button>
+                  <div style={{ height: 1, background: "#374151" }} />
+                  <button onClick={() => supabase.auth.signOut()} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#9ca3af", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
                     <span style={{ fontSize: 16 }}>→</span> Sair
                   </button>
                 </div>
@@ -1241,7 +1329,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
             const hasEx = (workouts[day] || []).length > 0;
             const dayDone = hasEx && (workouts[day] || []).every(e => e.done.length === e.sets);
             return (
-              <button key={day} onClick={() => { if (!sessionActive) setActiveDay(i); }} style={{
+              <button key={day} onClick={() => { if (!sessionActive) { setActiveDay(i); setShowMenu(false); } }} style={{
                 position: "relative",
                 background: isActive ? "#a3e635" : hasEx ? "#1f2937" : "transparent",
                 border: isActive ? "none" : `1.5px solid ${hasEx ? "#374151" : "#1f2937"}`,
