@@ -788,6 +788,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
   const [activeDay, setActiveDay] = useState(0);
   const [showPicker, setShowPicker] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
+  const tripleClickRef = useRef({ count: 0, timer: null });
   const [sessionActive, setSessionActive] = useState(false);
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -925,6 +926,18 @@ export default function WorkoutTracker({ userId, userEmail }) {
     setShowFinishConfirm(false);
   }
 
+  function handleLogoClick() {
+    const t = tripleClickRef.current;
+    t.count += 1;
+    clearTimeout(t.timer);
+    t.timer = setTimeout(() => { t.count = 0; }, 600);
+    if (t.count >= 3) {
+      t.count = 0;
+      // Hard reload sem cache
+      window.location.reload(true);
+    }
+  }
+
   if (!hydrated) return (
     <div style={{ minHeight: "100vh", background: "#0a0f1a", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, fontFamily: "system-ui, sans-serif" }}>
       <div style={{ fontSize: 36 }}>💪</div>
@@ -942,7 +955,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
         {/* Top row: logo + actions */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 13, fontWeight: 800, color: "#a3e635", letterSpacing: "2px" }}>TRAINEFY</span>
+            <span onClick={handleLogoClick} style={{ fontSize: 13, fontWeight: 800, color: "#a3e635", letterSpacing: "2px", cursor: "default", userSelect: "none" }}>TRAINEFY</span>
             <span style={{ fontSize: 10, color: "#a3e635", opacity: savedFlash ? 1 : 0, transition: "opacity 0.3s", fontWeight: 600 }}>✓ salvo</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
