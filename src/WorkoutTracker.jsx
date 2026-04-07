@@ -212,9 +212,9 @@ function Stepper({ label, val, onDec, onInc }) {
     <div style={{ background: "#1f2937", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 6, alignItems: "center" }}>
       <span style={{ fontSize: 11, color: "#6b7280" }}>{label}</span>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <button onClick={onDec} style={{ background: "#374151", border: "none", borderRadius: 6, width: 28, height: 28, cursor: "pointer", color: "#f9fafb", fontSize: 16, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+        <button onClick={onDec} style={{ background: "#374151", border: "none", borderRadius: 8, width: 36, height: 36, cursor: "pointer", color: "#f9fafb", fontSize: 18, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
         <span style={{ fontSize: 22, fontWeight: 700, color: "#f9fafb", minWidth: 28, textAlign: "center" }}>{val}</span>
-        <button onClick={onInc} style={{ background: "#374151", border: "none", borderRadius: 6, width: 28, height: 28, cursor: "pointer", color: "#f9fafb", fontSize: 16, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+        <button onClick={onInc} style={{ background: "#374151", border: "none", borderRadius: 8, width: 36, height: 36, cursor: "pointer", color: "#f9fafb", fontSize: 18, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
       </div>
     </div>
   );
@@ -502,12 +502,13 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
             <div style={{ display: "flex", gap: 6 }}>
               <button onClick={saveEdit} style={{
                 background: color, border: "none", borderRadius: 8,
-                padding: "5px 10px", cursor: "pointer",
-                fontSize: 12, fontWeight: 800, color: "#0a0a0a",
+                padding: "8px 14px", cursor: "pointer",
+                fontSize: 13, fontWeight: 800, color: "#0a0a0a",
+                minHeight: 38,
               }}>✓ salvar</button>
               <button onClick={() => setEditing(false)} style={{
                 background: "#1f2937", border: "none", borderRadius: 8,
-                width: 30, height: 30, cursor: "pointer", color: "#6b7280", fontSize: 14,
+                width: 38, height: 38, cursor: "pointer", color: "#6b7280", fontSize: 16,
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>✕</button>
             </div>
@@ -518,7 +519,7 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
                 style={{
                   background: menuOpen ? "#374151" : "#1f2937",
                   border: "1px solid #374151",
-                  borderRadius: 8, width: 30, height: 30,
+                  borderRadius: 8, width: 38, height: 38,
                   cursor: "pointer", color: "#9ca3af",
                   fontSize: 16, fontWeight: 700,
                   display: "flex", alignItems: "center", justifyContent: "center",
@@ -575,9 +576,9 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
               <div key={label} style={{ flex: 1, background: "#1f2937", borderRadius: 10, padding: "10px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
                 <span style={{ fontSize: 10, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.8px" }}>{label}</span>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <button onClick={() => set(v => Math.max(1, v - 1))} style={{ background: "#374151", border: "none", borderRadius: 6, width: 26, height: 26, cursor: "pointer", color: "#f9fafb", fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
-                  <span style={{ fontSize: 20, fontWeight: 700, color: "#f9fafb", minWidth: 24, textAlign: "center" }}>{val}</span>
-                  <button onClick={() => set(v => v + 1)} style={{ background: "#374151", border: "none", borderRadius: 6, width: 26, height: 26, cursor: "pointer", color: "#f9fafb", fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                  <button onClick={() => set(v => Math.max(1, v - 1))} style={{ background: "#374151", border: "none", borderRadius: 8, width: 36, height: 36, cursor: "pointer", color: "#f9fafb", fontSize: 18, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                  <span style={{ fontSize: 20, fontWeight: 700, color: "#f9fafb", minWidth: 28, textAlign: "center" }}>{val}</span>
+                  <button onClick={() => set(v => v + 1)} style={{ background: "#374151", border: "none", borderRadius: 8, width: 36, height: 36, cursor: "pointer", color: "#f9fafb", fontSize: 18, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
                 </div>
               </div>
             ))}
@@ -623,27 +624,27 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
               <div style={{
                 display: "flex", alignItems: "center", gap: 8,
                 background: isDone ? color + "18" : "#1a2234",
-                padding: "8px 12px",
+                padding: "4px 12px 4px 16px",
                 transition: "background 0.2s",
               }}>
                 <span style={{ flex: "0 0 60px", fontSize: 13, fontWeight: 600, color: isDone ? color : "#4b5563" }}>
                   Série {i + 1}
                 </span>
                 <div style={{ flex: 1, height: 1, background: isDone ? color + "33" : "#374151" }} />
-                <div style={{ display: "flex", alignItems: "center", gap: 4, background: "#111827", borderRadius: 8, padding: "2px 6px" }}>
-                  <button onClick={() => { const cur = Number(setWeight) || 0; onUpdateSetWeight(exercise.id, i, Math.max(0, cur - 2.5)); }}
-                    style={{ background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 16, padding: "2px 4px", lineHeight: 1 }}>−</button>
+                <div style={{ display: "flex", alignItems: "center", gap: 0, background: "#111827", borderRadius: 10 }}>
+                  <button onClick={() => { const cur = Number(setWeight) || 0; onUpdateSetWeight(exercise.id, i, Math.max(0, cur - 5)); }}
+                    style={{ background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 20, fontWeight: 300, width: 36, height: 44, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>−</button>
                   <input type="number" value={setWeight} onChange={e => onUpdateSetWeight(exercise.id, i, e.target.value)} placeholder="—"
-                    style={{ background: "none", border: "none", width: 44, textAlign: "center", color: isDone ? color : "#f9fafb", fontSize: 14, fontWeight: 700, outline: "none" }} />
-                  <button onClick={() => { const cur = Number(setWeight) || 0; onUpdateSetWeight(exercise.id, i, cur + 2.5); }}
-                    style={{ background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 16, padding: "2px 4px", lineHeight: 1 }}>+</button>
+                    style={{ background: "none", border: "none", width: 40, textAlign: "center", color: isDone ? color : "#f9fafb", fontSize: 14, fontWeight: 700, outline: "none" }} />
+                  <button onClick={() => { const cur = Number(setWeight) || 0; onUpdateSetWeight(exercise.id, i, cur + 5); }}
+                    style={{ background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 20, fontWeight: 300, width: 36, height: 44, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>+</button>
                 </div>
                 <button onClick={() => handleToggle(i)} style={{
-                  flex: "0 0 36px", height: 36, borderRadius: 8,
+                  flex: "0 0 44px", height: 44, borderRadius: 10,
                   background: isDone ? color : "transparent",
                   border: isDone ? "none" : "1.5px solid #374151",
                   color: isDone ? "#0a0a0a" : "#4b5563",
-                  fontSize: isDone ? 16 : 14, fontWeight: 700, cursor: "pointer",
+                  fontSize: isDone ? 18 : 16, fontWeight: 700, cursor: "pointer",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   transition: "all 0.15s",
                 }}>
