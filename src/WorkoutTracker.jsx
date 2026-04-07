@@ -778,7 +778,25 @@ function HistoryScreen({ onClose }) {
           </div>
         </div>
       )}
+      <Copyright />
     </div>
+  );
+}
+
+// ── COPYRIGHT ─────────────────────────────────────────────────────────────
+function Copyright() {
+  return (
+    <p style={{
+      margin: 0,
+      padding: "16px 0 8px",
+      textAlign: "center",
+      fontSize: 11,
+      color: "#374151",
+      fontWeight: 500,
+      letterSpacing: "0.3px",
+    }}>
+      Criado por Thiago Camargo Betti
+    </p>
   );
 }
 
@@ -970,6 +988,7 @@ function ImportScreen({ onClose, onImport }) {
           </div>
         </div>
       </div>
+      <Copyright />
     </div>
   );
 }
@@ -1316,6 +1335,8 @@ export default function WorkoutTracker({ userId, userEmail }) {
           </button>
         )}
       </div>
+
+      <Copyright />
 
       <style>{`
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
