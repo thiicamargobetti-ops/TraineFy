@@ -1126,6 +1126,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
   const [showReset, setShowReset] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showNewWorkout, setShowNewWorkout] = useState(false);
+  const [screen, setScreen] = useState("home"); // "home" | "workout"
   const [newWorkoutName, setNewWorkoutName] = useState('');
   const [editingWorkoutId, setEditingWorkoutId] = useState(null);
   const [editingWorkoutName, setEditingWorkoutName] = useState('');
@@ -1315,8 +1316,6 @@ export default function WorkoutTracker({ userId, userEmail }) {
   }} />;
 
   // ── SCREEN: home grid or workout detail
-  const [screen, setScreen] = useState("home"); // "home" | "workout"
-
   // When entering workout, set active idx
   function openWorkout(idx) {
     setActiveIdx(idx);
