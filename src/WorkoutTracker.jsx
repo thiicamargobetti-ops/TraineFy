@@ -440,7 +440,7 @@ function RestBar({ duration, startedAt, color, onDone }) {
 }
 
 // ── EXERCISE CARD ─────────────────────────────────────────────────────────
-function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUpdateExercise, sessionActive, lightTheme = false }) {
+function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUpdateExercise, sessionActive }) {
   const color = MUSCLE_COLORS[exercise.group] || "#6b7280";
   const doneSets = exercise.done.length;
   const totalSets = exercise.sets;
@@ -489,7 +489,7 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
 
   return (
     <div style={{
-      background: lightTheme ? "#ffffff" : "#111827", borderRadius: 16,
+      background: "#111827", borderRadius: 16,
       border: `1px solid ${fullyDone ? color + "55" : editing ? color + "44" : "#1a2234"}`,
       overflow: "hidden",
       transition: "border-color 0.3s",
@@ -506,7 +506,7 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
               </span>
             )}
           </div>
-          <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: lightTheme ? "#0f172a" : "#f9fafb", textAlign: "left" }}>{exercise.name}</p>
+          <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#f9fafb", textAlign: "left" }}>{exercise.name}</p>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -640,7 +640,7 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
               {/* Set row */}
               <div style={{
                 display: "flex", alignItems: "center", gap: 8,
-                background: isDone ? color + "18" : lightTheme ? "#f8fafc" : "#1a2234",
+                background: isDone ? color + "18" : "#1a2234",
                 padding: "4px 12px 4px 16px",
                 transition: "background 0.2s",
               }}>
@@ -648,12 +648,12 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
                   Série {i + 1}
                 </span>
                 <div style={{ flex: 1, height: 1, background: isDone ? color + "33" : "#374151" }} />
-                <div style={{ display: "flex", alignItems: "center", gap: 0, background: lightTheme ? "#e2e8f0" : "#111827", borderRadius: 10, opacity: isDone ? 0.4 : 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 0, background: "#111827", borderRadius: 10, opacity: isDone ? 0.4 : 1 }}>
                   <button onClick={() => { if (isDone) return; const cur = Number(setWeight) || 0; onUpdateSetWeight(exercise.id, i, Math.max(0, cur - 5)); }}
                     style={{ background: "none", border: "none", color: "#6b7280", cursor: isDone ? "default" : "pointer", fontSize: 20, fontWeight: 300, width: 36, height: 44, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>−</button>
                   <input type="number" value={setWeight} readOnly={isDone}
                     onChange={e => { if (!isDone) onUpdateSetWeight(exercise.id, i, e.target.value); }} placeholder="—"
-                    style={{ background: "none", border: "none", width: 40, textAlign: "center", color: isDone ? color : lightTheme ? "#1e293b" : "#f9fafb", fontSize: 14, fontWeight: 700, outline: "none", pointerEvents: isDone ? "none" : "auto" }} />
+                    style={{ background: "none", border: "none", width: 40, textAlign: "center", color: isDone ? color : "#f9fafb", fontSize: 14, fontWeight: 700, outline: "none", pointerEvents: isDone ? "none" : "auto" }} />
                   <button onClick={() => { if (isDone) return; const cur = Number(setWeight) || 0; onUpdateSetWeight(exercise.id, i, cur + 5); }}
                     style={{ background: "none", border: "none", color: "#6b7280", cursor: isDone ? "default" : "pointer", fontSize: 20, fontWeight: 300, width: 36, height: 44, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>+</button>
                 </div>
@@ -1020,7 +1020,7 @@ function ImportScreen({ onClose, onImport }) {
             <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#f9fafb" }}>Baixe o modelo</p>
           </div>
           <p style={{ margin: "0 0 16px", fontSize: 13, color: "#6b7280", lineHeight: 1.6 }}>
-            Baixe a planilha modelo em CSV, preencha com seus treinos e faça o upload abaixo. Use os dias exatos: <strong style={{ color: "#d1d5db" }}>Seg, Ter, Qua, Qui, Sex, Sáb, Dom</strong>.
+            Baixe a planilha modelo em CSV, preencha com seus treinos e faça o upload abaixo. A coluna <strong style={{ color: "#d1d5db" }}>Treino</strong> deve ter o nome exato de cada treino (ex: Treino A, Peito e Tríceps).
           </p>
           <button onClick={downloadTemplate} style={{ width: "100%", background: "#1f2937", border: "1.5px solid #374151", borderRadius: 12, padding: "14px 0", cursor: "pointer", color: "#a3e635", fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
             <span style={{ fontSize: 18 }}>⬇️</span> Baixar modelo CSV
@@ -1109,7 +1109,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
   const [savedFlash, setSavedFlash] = useState(false);
   const tripleClickRef = useRef({ count: 0, timer: null });
   const headerRef = useRef(null);
-  const [headerHeight, setHeaderHeight] = useState(140);
+  const [headerHeight, setHeaderHeight] = useState(160);
 
   useEffect(() => {
     if (!headerRef.current) return;
@@ -1125,7 +1125,6 @@ export default function WorkoutTracker({ userId, userEmail }) {
   const [showImport, setShowImport] = useState(false);
   const [showReset, setShowReset] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const [lightTheme, setLightTheme] = useState(() => localStorage.getItem('trainefy_theme') === 'light');
   const [showNewWorkout, setShowNewWorkout] = useState(false);
   const [newWorkoutName, setNewWorkoutName] = useState('');
   const [editingWorkoutId, setEditingWorkoutId] = useState(null);
@@ -1318,7 +1317,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
   return (
     <div style={{
       minHeight: "100vh",
-      background: lightTheme ? "#f1f5f9" : "#0a0f1a",
+      background: "#0a0f1a",
       fontFamily: "system-ui, -apple-system, sans-serif",
     }}>
 
@@ -1329,14 +1328,14 @@ export default function WorkoutTracker({ userId, userEmail }) {
         left: 0,
         right: 0,
         zIndex: 50,
-        background: lightTheme ? "#f1f5f9" : "#0a0f1a",
+        background: "#0a0f1a",
         paddingTop: "env(safe-area-inset-top)",
       }}>
         <div style={{ padding: "12px 20px 0" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span onClick={handleLogoClick} style={{ fontSize: 28, fontWeight: 900, color: lightTheme ? "#16a34a" : "#a3e635", letterSpacing: "3px", cursor: "default", userSelect: "none", lineHeight: 1 }}>TRAINEFY</span>
+                <span onClick={handleLogoClick} style={{ fontSize: 28, fontWeight: 900, color: "#a3e635", letterSpacing: "3px", cursor: "default", userSelect: "none", lineHeight: 1 }}>TRAINEFY</span>
                 <span style={{ fontSize: 10, color: "#a3e635", opacity: savedFlash ? 1 : 0, transition: "opacity 0.3s", fontWeight: 600 }}>✓ salvo</span>
               </div>
             </div>
@@ -1347,12 +1346,12 @@ export default function WorkoutTracker({ userId, userEmail }) {
               {showMenu && (
                 <>
                   <div onClick={() => setShowMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 10, WebkitTapHighlightColor: "transparent" }} />
-                  <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 20, background: lightTheme ? "#ffffff" : "#1f2937", borderRadius: 14, border: lightTheme ? "1px solid #e2e8f0" : "1px solid #374151", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.2)", minWidth: 180 }}>
-                    <button onClick={() => { setShowHistory(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: lightTheme ? "#1e293b" : "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 20, background: "#1f2937", borderRadius: 14, border: "1px solid #374151", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", minWidth: 180 }}>
+                    <button onClick={() => { setShowHistory(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10 }}>
                       <span>📊</span> Histórico
                     </button>
                     <div style={{ height: 1, background: "#374151" }} />
-                    <button onClick={() => { setShowImport(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: lightTheme ? "#1e293b" : "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10 }}>
+                    <button onClick={() => { setShowImport(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10 }}>
                       <span>📥</span> Importar treino
                     </button>
                     <div style={{ height: 1, background: "#374151" }} />
@@ -1360,10 +1359,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
                       <span>🗑️</span> Zerar dados
                     </button>
                     <div style={{ height: 1, background: "#374151" }} />
-                    <button onClick={() => { setLightTheme(v => { const next = !v; localStorage.setItem('trainefy_theme', next ? 'light' : 'dark'); return next; }); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: lightTheme ? "#1e293b" : "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10 }}>
-                      <span>{lightTheme ? "🌙" : "☀️"}</span> {lightTheme ? "Modo escuro" : "Modo claro"}
-                    </button>
-                    <div style={{ height: 1, background: "#374151" }} />
+
                     <button onClick={() => supabase.auth.signOut()} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#9ca3af", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10 }}>
                       <span>→</span> Sair
                     </button>
@@ -1402,7 +1398,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
                       onTouchEnd={() => { clearTimeout(longPressTimer); setLongPressTimer(null); }}
                       onTouchMove={() => { clearTimeout(longPressTimer); setLongPressTimer(null); }}
                       onContextMenu={e => e.preventDefault()}
-                      style={{ position: "relative", background: isActive ? "#a3e635" : "#1f2937", border: isActive ? "none" : "1.5px solid #374151", borderRadius: 10, padding: "8px 14px", cursor: sessionActive ? "default" : "pointer", fontSize: 14, fontWeight: isActive ? 700 : 500, color: isActive ? "#0a0a0a" : lightTheme ? "#475569" : "#d1d5db", opacity: sessionActive && !isActive ? 0.4 : 1, userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none" }}
+                      style={{ position: "relative", background: isActive ? "#a3e635" : "#1f2937", border: isActive ? "none" : "1.5px solid #374151", borderRadius: 10, padding: "8px 14px", cursor: sessionActive ? "default" : "pointer", fontSize: 14, fontWeight: isActive ? 700 : 500, color: isActive ? "#0a0a0a" : "#d1d5db", opacity: sessionActive && !isActive ? 0.4 : 1, userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none" }}
                     >
                       {w.name}
                       {isDone && !isActive && <span style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: "50%", background: "#a3e635" }} />}
@@ -1458,14 +1454,14 @@ export default function WorkoutTracker({ userId, userEmail }) {
 
       {/* ── SCROLLABLE CONTENT ── */}
       <div id="scroll-area" style={{
-        paddingTop: headerHeight + 8,
+        paddingTop: headerHeight + 16,
         paddingBottom: "calc(env(safe-area-inset-bottom) + 90px)",
         paddingLeft: 20,
         paddingRight: 20,
         overflowY: "auto",
         WebkitOverflowScrolling: "touch",
         minHeight: "100vh",
-        background: lightTheme ? "#f1f5f9" : "#0a0f1a",
+        background: "#0a0f1a",
       }}>
         {workouts.length === 0 ? (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
@@ -1486,7 +1482,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {exercises.map(ex => (
-              <ExerciseCard key={ex.id} exercise={ex} onRemove={removeExercise} onToggleSet={toggleSet} onUpdateSetWeight={updateSetWeight} onUpdateExercise={updateExercise} sessionActive={sessionActive} lightTheme={lightTheme} />
+              <ExerciseCard key={ex.id} exercise={ex} onRemove={removeExercise} onToggleSet={toggleSet} onUpdateSetWeight={updateSetWeight} onUpdateExercise={updateExercise} sessionActive={sessionActive} />
             ))}
           </div>
         )}
@@ -1499,8 +1495,8 @@ export default function WorkoutTracker({ userId, userEmail }) {
         left: 0,
         right: 0,
         zIndex: 50,
-        background: lightTheme ? "#f1f5f9" : "#0a0f1a",
-        borderTop: lightTheme ? "1px solid #e2e8f0" : "1px solid #1a2234",
+        background: "#0a0f1a",
+        borderTop: "1px solid #1a2234",
         paddingTop: 12,
         paddingLeft: 20,
         paddingRight: 20,
