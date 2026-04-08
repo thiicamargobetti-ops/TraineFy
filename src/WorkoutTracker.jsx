@@ -1273,10 +1273,13 @@ export default function WorkoutTracker({ userId, userEmail }) {
   }} />;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0f1a", fontFamily: "system-ui, -apple-system, sans-serif", paddingBottom: 120, maxWidth: 480, margin: "0 auto" }}>
+    <div style={{ height: "100dvh", background: "#0a0f1a", fontFamily: "system-ui, -apple-system, sans-serif", display: "flex", flexDirection: "column", maxWidth: 480, margin: "0 auto", overflow: "hidden" }}>
+
+      {/* ── FIXED TOP SECTION ── */}
+      <div style={{ flexShrink: 0, background: "#0a0f1a" }}>
 
       {/* Header */}
-      <div style={{ padding: "20px 20px 0" }}>
+      <div style={{ padding: "16px 20px 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
           {/* Logo */}
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -1441,13 +1444,15 @@ export default function WorkoutTracker({ userId, userEmail }) {
 
       {/* Progress Bar */}
       {exercises.length > 0 && (
-        <div style={{ margin: "0 20px 16px", height: 3, background: "#1f2937", borderRadius: 2 }}>
+        <div style={{ margin: "0 20px 8px", height: 3, background: "#1f2937", borderRadius: 2 }}>
           <div style={{ height: "100%", borderRadius: 2, background: "#a3e635", width: `${(doneCount / exercises.length) * 100}%`, transition: "width 0.4s ease" }} />
         </div>
       )}
 
-      {/* Exercise List */}
-      <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 12 }}>
+      </div>{/* end fixed top */}
+
+      {/* ── SCROLLABLE EXERCISE LIST ── */}
+      <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "0 20px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
         {workouts.length === 0 ? (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "80px 20px" }}>
             <div style={{ fontSize: 56 }}>🏋️</div>
@@ -1475,10 +1480,10 @@ export default function WorkoutTracker({ userId, userEmail }) {
             sessionActive={sessionActive}
           />
         ))}
-      </div>
+      </div>{/* end scrollable */}
 
-      {/* Bottom bar */}
-      <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, padding: "12px 20px 28px", background: "linear-gradient(to top, #0a0f1a 60%, transparent)", boxSizing: "border-box" }}>
+      {/* ── FIXED BOTTOM BAR ── */}
+      <div style={{ flexShrink: 0, padding: "12px 20px", paddingBottom: "max(16px, env(safe-area-inset-bottom))", background: "#0a0f1a", borderTop: "1px solid #1f2937" }}>
 
         {showFinishConfirm && (
           <div style={{ background: "#1f2937", borderRadius: 14, padding: "14px 16px", border: "1px solid #374151", marginBottom: 12 }}>
@@ -1518,9 +1523,9 @@ export default function WorkoutTracker({ userId, userEmail }) {
             <span style={{ fontSize: 18 }}>+</span> Exercício
           </button>
         )}
-      </div>
+      </div>{/* end bottom bar */}
 
-      <Copyright />
+    </div>{/* end root */}
 
       <style>{`
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
@@ -1531,6 +1536,5 @@ export default function WorkoutTracker({ userId, userEmail }) {
       `}</style>
 
       {showPicker && <PickerModal onClose={() => setShowPicker(false)} onAdd={addExercise} />}
-    </div>
   );
 }
