@@ -1,10 +1,7 @@
 // TraineFy Service Worker — push notifications locais
-// Versão: 1.0.0
-
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", e => e.waitUntil(self.clients.claim()));
 
-// Recebe mensagem do app principal e dispara notificação
 self.addEventListener("message", e => {
   if (e.data?.type === "PUSH") {
     const { title, body } = e.data;
@@ -15,12 +12,11 @@ self.addEventListener("message", e => {
       vibrate: [200, 100, 200],
       silent: false,
       requireInteraction: false,
-      tag: "trainefy-hiit",
+      tag: "trainefy",
     });
   }
 });
 
-// Toque na notificação → foca/abre o app
 self.addEventListener("notificationclick", e => {
   e.notification.close();
   e.waitUntil(
