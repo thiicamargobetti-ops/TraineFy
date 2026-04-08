@@ -1280,10 +1280,10 @@ export default function WorkoutTracker({ userId, userEmail }) {
 
         {/* Header */}
         <div style={{ padding: "16px 20px 0" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span onClick={handleLogoClick} style={{ fontSize: 22, fontWeight: 900, color: "#a3e635", letterSpacing: "3px", cursor: "default", userSelect: "none", lineHeight: 1 }}>TRAINEFY</span>
+                <span onClick={handleLogoClick} style={{ fontSize: 30, fontWeight: 900, color: "#a3e635", letterSpacing: "3px", cursor: "default", userSelect: "none", lineHeight: 1 }}>TRAINEFY</span>
                 <span style={{ fontSize: 10, color: "#a3e635", opacity: savedFlash ? 1 : 0, transition: "opacity 0.3s", fontWeight: 600 }}>✓ salvo</span>
               </div>
               <span style={{ fontSize: 11, color: "#4b5563", fontWeight: 400 }}>{userEmail}</span>
@@ -1315,19 +1315,6 @@ export default function WorkoutTracker({ userId, userEmail }) {
                 </>
               )}
             </div>
-          </div>
-
-          {/* Title + counter */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 6 }}>
-            <h1 style={{ margin: 0, fontSize: 36, fontWeight: 800, color: "#f9fafb", lineHeight: 1 }}>
-              {activeWorkout ? activeWorkout.name : ""}
-            </h1>
-            {exercises.length > 0 && (
-              <div style={{ textAlign: "right", paddingBottom: 2 }}>
-                <div style={{ fontSize: 20, fontWeight: 700, color: "#a3e635" }}>{doneCount}/{exercises.length}</div>
-                <div style={{ fontSize: 10, color: "#4b5563" }}>exercícios</div>
-              </div>
-            )}
           </div>
 
           {/* Stats row */}
@@ -1391,6 +1378,12 @@ export default function WorkoutTracker({ userId, userEmail }) {
             })}
             {workouts.length < MAX_WORKOUTS && !sessionActive && (
               <button onClick={() => setShowNewWorkout(true)} style={{ background: "#1f2937", border: "1.5px dashed #374151", borderRadius: 10, width: 38, height: 38, cursor: "pointer", color: "#6b7280", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>+</button>
+            )}
+            {exercises.length > 0 && (
+              <div style={{ marginLeft: "auto", textAlign: "right", paddingLeft: 8 }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "#a3e635" }}>{doneCount}/{exercises.length}</div>
+                <div style={{ fontSize: 10, color: "#4b5563" }}>exercícios</div>
+              </div>
             )}
           </div>
         </div>
