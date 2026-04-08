@@ -1078,6 +1078,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
   const [showReset, setShowReset] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [history, setHistory] = useState(loadHistory);
+  const saveTimeoutRef = useRef(null);
   useEffect(() => { setShowMenu(false); }, [activeDay]);
 
   // Carrega dados da nuvem ao montar. Dados da nuvem têm prioridade sobre local.
