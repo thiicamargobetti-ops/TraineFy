@@ -484,7 +484,7 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
       transition: "border-color 0.3s",
       boxShadow: fullyDone ? `0 0 20px ${color}18` : "none",
     }}>
-      <div style={{ padding: "14px 16px 6px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <div style={{ padding: "14px 16px 6px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", textAlign: "left" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: color, display: "inline-block" }} />
@@ -495,7 +495,7 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
               </span>
             )}
           </div>
-          <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#f9fafb" }}>{exercise.name}</p>
+          <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#f9fafb", textAlign: "left" }}>{exercise.name}</p>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -1273,13 +1273,13 @@ export default function WorkoutTracker({ userId, userEmail }) {
   }} />;
 
   return (
-    <div style={{ height: "100dvh", background: "#0a0f1a", fontFamily: "system-ui, -apple-system, sans-serif", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{ height: "100dvh", background: "#0a0f1a", fontFamily: "system-ui, -apple-system, sans-serif", display: "flex", flexDirection: "column", overflow: "hidden", paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
 
       {/* ── FIXED TOP ── */}
       <div style={{ flexShrink: 0, background: "#0a0f1a" }}>
 
         {/* Header */}
-        <div style={{ padding: "16px 20px 0" }}>
+        <div style={{ padding: "12px 20px 0" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1424,7 +1424,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
       </div>
 
       {/* ── FIXED BOTTOM BAR ── */}
-      <div style={{ flexShrink: 0, padding: "10px 20px", paddingBottom: "max(20px, env(safe-area-inset-bottom))", background: "#0a0f1a", borderTop: "1px solid #1a2234", marginTop: "auto" }}>
+      <div style={{ flexShrink: 0, padding: "12px 20px 16px", background: "#0a0f1a", borderTop: "1px solid #1a2234" }}>
         {showFinishConfirm && (
           <div style={{ background: "#1f2937", borderRadius: 14, padding: "14px 16px", border: "1px solid #374151", marginBottom: 10 }}>
             <p style={{ margin: "0 0 4px", fontSize: 14, color: "#f9fafb", fontWeight: 700 }}>Finalizar treino?</p>
