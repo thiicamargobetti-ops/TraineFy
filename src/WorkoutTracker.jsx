@@ -1466,6 +1466,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
     const saved = storage.get(SESSION_START_KEY);
     return saved ? Number(saved) : null;
   });
+  const elapsed = useElapsedTimer(sessionActive);
   // Salva na nuvem com debounce
   useEffect(() => {
     if (!hydrated) return;
