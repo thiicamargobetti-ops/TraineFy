@@ -447,6 +447,7 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
   const fullyDone = doneSets === totalSets;
   const [restingSet, setRestingSet] = useState(null);
   const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState(exercise.name);
   const [editSets, setEditSets] = useState(exercise.sets);
   const [editReps, setEditReps] = useState(exercise.reps);
   const [editRest, setEditRest] = useState(exercise.restTime ?? 90);
@@ -475,6 +476,7 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
   const [menuOpen, setMenuOpen] = useState(false);
 
   const openEdit = () => {
+    setEditName(exercise.name);
     setEditSets(exercise.sets);
     setEditReps(exercise.reps);
     setEditRest(exercise.restTime ?? 90);
@@ -483,7 +485,8 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
   };
 
   const saveEdit = () => {
-    onUpdateExercise(exercise.id, { sets: editSets, reps: editReps, restTime: editRest });
+    const name = editName.trim() || exercise.name;
+    onUpdateExercise(exercise.id, { name, sets: editSets, reps: editReps, restTime: editRest });
     setEditing(false);
   };
 
@@ -588,6 +591,18 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
       {/* ── EDIT PANEL ── */}
       {editing && (
         <div style={{ margin: "4px 16px 14px", background: "#0d1524", borderRadius: 12, padding: "14px 14px 16px", border: `1px solid ${color}33` }}>
+          <p style={{ margin: "0 0 6px", fontSize: 10, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.8px" }}>Nome</p>
+          <input
+            value={editName}
+            onChange={e => setEditName(e.target.value)}
+            autoFocus
+            style={{
+              width: "100%", background: "#1f2937", border: `1.5px solid ${color}55`,
+              borderRadius: 10, padding: "10px 12px", color: "#f9fafb",
+              fontSize: 14, fontWeight: 600, outline: "none",
+              boxSizing: "border-box", marginBottom: 14,
+            }}
+          />
           <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
             {[{ label: "Séries", val: editSets, set: setEditSets }, { label: "Reps", val: editReps, set: setEditReps }].map(({ label, val, set }) => (
               <div key={label} style={{ flex: 1, background: "#1f2937", borderRadius: 10, padding: "10px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
@@ -1275,6 +1290,114 @@ function ResetScreen({ onClose, onReset }) {
   );
 }
 
+
+// ── CLAUDE IMPORT TIP ─────────────────────────────────────────────────────
+function ClaudeImportTip() {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const PROMPT = `Vou te enviar dois arquivos:
+1. A planilha modelo do Trainefy (trainefy_modelo.csv)
+2. Meu treino atual (pode ser uma foto, PDF, texto ou planilha)
+
+Por favor, monte uma planilha CSV no mesmo formato do modelo, com os meus exercícios organizados corretamente.
+
+Regras importantes:
+- A coluna "Treino" deve ter o nome de cada treino (ex: Treino A, Peito e Tríceps)
+- A coluna "Grupo" deve usar exatamente um destes valores: Peito, Costas, Quadríceps, Post. Coxa, Glúteos, Panturrilha, Bíceps, Tríceps, Ombros, Trapézio, Antebraço, Core
+- A coluna "Descanso (seg)" deve ser o tempo de descanso em segundos (ex: 90)
+- Não adicione colunas extras, não mude os nomes das colunas
+- Retorne apenas o conteúdo CSV puro, sem explicações, sem blocos de código markdown`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(PROMPT).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }).catch(() => {
+      const ta = document.createElement("textarea");
+      ta.value = PROMPT;
+      ta.style.cssText = "position:fixed;opacity:0";
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
+  };
+
+  return (
+    <div style={{ background: "#111827", borderRadius: 16, border: "1px solid #1f2937", overflow: "hidden" }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        style={{
+          width: "100%", background: "none", border: "none",
+          padding: "16px 20px", cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 20 }}>🤖</span>
+          <div style={{ textAlign: "left" }}>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#f9fafb" }}>Usar o Claude para montar a planilha</p>
+            <p style={{ margin: "2px 0 0", fontSize: 12, color: "#6b7280" }}>Deixe o Claude fazer o trabalho pesado</p>
+          </div>
+        </div>
+        <span style={{
+          fontSize: 11, color: "#6b7280", fontWeight: 700,
+          display: "inline-block",
+          transform: open ? "rotate(180deg)" : "rotate(0deg)",
+          transition: "transform 0.2s",
+        }}>▼</span>
+      </button>
+
+      {open && (
+        <div style={{ padding: "0 20px 20px", borderTop: "1px solid #1a2234" }}>
+          <div style={{ paddingTop: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+            {[
+              { n: "1", text: "Baixe a planilha modelo (Passo 1 acima)" },
+              { n: "2", text: "Abra o claude.ai e inicie uma conversa nova" },
+              { n: "3", text: "Envie a planilha modelo + seu treino atual (foto, PDF, print ou texto)" },
+              { n: "4", text: "Cole o prompt abaixo na mesma mensagem e envie" },
+              { n: "5", text: "Baixe o CSV gerado pelo Claude e faça upload aqui no Passo 2" },
+            ].map(({ n, text }) => (
+              <div key={n} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                <span style={{
+                  width: 22, height: 22, borderRadius: "50%",
+                  background: "#a3e63522", color: "#a3e635",
+                  fontSize: 11, fontWeight: 800, flexShrink: 0,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>{n}</span>
+                <p style={{ margin: 0, fontSize: 13, color: "#d1d5db", lineHeight: 1.5 }}>{text}</p>
+              </div>
+            ))}
+
+            <button
+              onClick={handleCopy}
+              style={{
+                marginTop: 6,
+                width: "100%", background: copied ? "#a3e63522" : "#1f2937",
+                border: `1.5px solid ${copied ? "#a3e635" : "#374151"}`,
+                borderRadius: 12, padding: "14px 0", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                fontSize: 14, fontWeight: 700,
+                color: copied ? "#a3e635" : "#f9fafb",
+                transition: "all 0.2s",
+              }}
+            >
+              {copied ? "✓ Prompt copiado!" : "📋 Copiar prompt para o Claude"}
+            </button>
+
+            <p style={{ margin: 0, fontSize: 11, color: "#4b5563", textAlign: "center", lineHeight: 1.5 }}>
+              O Claude monta a planilha no formato correto automaticamente.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── IMPORT SCREEN ─────────────────────────────────────────────────────────
 function ImportScreen({ onClose, onImport }) {
   const [dragging, setDragging] = useState(false);
@@ -1467,6 +1590,9 @@ function ImportScreen({ onClose, onImport }) {
             </table>
           </div>
         </div>
+
+        {/* Dica Claude — expansível */}
+        <ClaudeImportTip />
       </div>
       <Copyright />
     </div>
@@ -1869,9 +1995,9 @@ export default function WorkoutTracker({ userId, userEmail }) {
               {exercises.length > 0 && <span style={{ fontSize: 12, color: "#a3e635", fontWeight: 700 }}>{doneCount}/{exercises.length} séries</span>}
             </div>
             {sessionActive && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#a3e63522", borderRadius: 20, padding: "4px 12px" }}>
-                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#a3e635", animation: "pulse 1.5s infinite" }} />
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#a3e635" }}>{fmtTime(elapsed)}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#a3e63522", borderRadius: 20, padding: "4px 10px", border: "1px solid #a3e63533" }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#a3e635", display: "inline-block", animation: "pulse 1.5s infinite" }} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#a3e635", letterSpacing: "0.3px" }}>em treino</span>
               </div>
             )}
           </div>
