@@ -440,7 +440,7 @@ function RestBar({ duration, startedAt, color, onDone }) {
 }
 
 // ── EXERCISE CARD ─────────────────────────────────────────────────────────
-function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUpdateExercise, sessionActive }) {
+function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUpdateExercise, sessionActive, lightTheme = false }) {
   const color = MUSCLE_COLORS[exercise.group] || "#6b7280";
   const doneSets = exercise.done.length;
   const totalSets = exercise.sets;
@@ -451,14 +451,25 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
   const [editReps, setEditReps] = useState(exercise.reps);
   const [editRest, setEditRest] = useState(exercise.restTime ?? 90);
 
+  const [confirmUncheck, setConfirmUncheck] = useState(null); // set index to confirm
+
   const handleToggle = (i) => {
     const wasDone = exercise.done.includes(i);
-    onToggleSet(exercise.id, i);
-    if (!wasDone && sessionActive && exercise.restTime > 0) {
-      setRestingSet({ index: i, startedAt: Date.now() });
-    } else if (wasDone && restingSet?.index === i) {
-      setRestingSet(null);
+    if (wasDone) {
+      // Ask for confirmation before unchecking
+      setConfirmUncheck(i);
+      return;
     }
+    onToggleSet(exercise.id, i);
+    if (sessionActive && exercise.restTime > 0) {
+      setRestingSet({ index: i, startedAt: Date.now() });
+    }
+  };
+
+  const confirmUnchecked = (i) => {
+    onToggleSet(exercise.id, i);
+    if (restingSet?.index === i) setRestingSet(null);
+    setConfirmUncheck(null);
   };
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -478,7 +489,7 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
 
   return (
     <div style={{
-      background: "#111827", borderRadius: 16,
+      background: lightTheme ? "#ffffff" : "#111827", borderRadius: 16,
       border: `1px solid ${fullyDone ? color + "55" : editing ? color + "44" : "#1a2234"}`,
       overflow: "hidden",
       transition: "border-color 0.3s",
@@ -495,7 +506,7 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
               </span>
             )}
           </div>
-          <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#f9fafb", textAlign: "left" }}>{exercise.name}</p>
+          <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: lightTheme ? "#0f172a" : "#f9fafb", textAlign: "left" }}>{exercise.name}</p>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -629,7 +640,7 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
               {/* Set row */}
               <div style={{
                 display: "flex", alignItems: "center", gap: 8,
-                background: isDone ? color + "18" : "#1a2234",
+                background: isDone ? color + "18" : lightTheme ? "#f8fafc" : "#1a2234",
                 padding: "4px 12px 4px 16px",
                 transition: "background 0.2s",
               }}>
@@ -637,13 +648,14 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
                   Série {i + 1}
                 </span>
                 <div style={{ flex: 1, height: 1, background: isDone ? color + "33" : "#374151" }} />
-                <div style={{ display: "flex", alignItems: "center", gap: 0, background: "#111827", borderRadius: 10 }}>
-                  <button onClick={() => { const cur = Number(setWeight) || 0; onUpdateSetWeight(exercise.id, i, Math.max(0, cur - 5)); }}
-                    style={{ background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 20, fontWeight: 300, width: 36, height: 44, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>−</button>
-                  <input type="number" value={setWeight} onChange={e => onUpdateSetWeight(exercise.id, i, e.target.value)} placeholder="—"
-                    style={{ background: "none", border: "none", width: 40, textAlign: "center", color: isDone ? color : "#f9fafb", fontSize: 14, fontWeight: 700, outline: "none" }} />
-                  <button onClick={() => { const cur = Number(setWeight) || 0; onUpdateSetWeight(exercise.id, i, cur + 5); }}
-                    style={{ background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 20, fontWeight: 300, width: 36, height: 44, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>+</button>
+                <div style={{ display: "flex", alignItems: "center", gap: 0, background: lightTheme ? "#e2e8f0" : "#111827", borderRadius: 10, opacity: isDone ? 0.4 : 1 }}>
+                  <button onClick={() => { if (isDone) return; const cur = Number(setWeight) || 0; onUpdateSetWeight(exercise.id, i, Math.max(0, cur - 5)); }}
+                    style={{ background: "none", border: "none", color: "#6b7280", cursor: isDone ? "default" : "pointer", fontSize: 20, fontWeight: 300, width: 36, height: 44, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>−</button>
+                  <input type="number" value={setWeight} readOnly={isDone}
+                    onChange={e => { if (!isDone) onUpdateSetWeight(exercise.id, i, e.target.value); }} placeholder="—"
+                    style={{ background: "none", border: "none", width: 40, textAlign: "center", color: isDone ? color : lightTheme ? "#1e293b" : "#f9fafb", fontSize: 14, fontWeight: 700, outline: "none", pointerEvents: isDone ? "none" : "auto" }} />
+                  <button onClick={() => { if (isDone) return; const cur = Number(setWeight) || 0; onUpdateSetWeight(exercise.id, i, cur + 5); }}
+                    style={{ background: "none", border: "none", color: "#6b7280", cursor: isDone ? "default" : "pointer", fontSize: 20, fontWeight: 300, width: 36, height: 44, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>+</button>
                 </div>
                 <button onClick={() => handleToggle(i)} style={{
                   flex: "0 0 44px", height: 44, borderRadius: 10,
@@ -671,6 +683,20 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
           );
         })}
       </div>
+
+      {/* Confirm uncheck modal */}
+      {confirmUncheck !== null && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 24px" }}>
+          <div style={{ background: "#1f2937", borderRadius: 16, padding: 24, width: "100%", maxWidth: 340, border: "1px solid #374151" }}>
+            <p style={{ margin: "0 0 8px", fontSize: 16, fontWeight: 700, color: "#f9fafb" }}>Desmarcar série?</p>
+            <p style={{ margin: "0 0 20px", fontSize: 13, color: "#6b7280" }}>Tem certeza que deseja desmarcar a Série {confirmUncheck + 1}?</p>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setConfirmUncheck(null)} style={{ flex: 1, background: "#374151", border: "none", borderRadius: 10, padding: "12px 0", cursor: "pointer", color: "#9ca3af", fontSize: 14, fontWeight: 600 }}>Cancelar</button>
+              <button onClick={() => confirmUnchecked(confirmUncheck)} style={{ flex: 1, background: "#ef4444", border: "none", borderRadius: 10, padding: "12px 0", cursor: "pointer", color: "#fff", fontSize: 14, fontWeight: 800 }}>Desmarcar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -884,14 +910,14 @@ function ImportScreen({ onClose, onImport }) {
   const fileRef = useRef(null);
 
   function downloadTemplate() {
-    const header = "Dia,Exercício,Grupo,Séries,Reps,Carga (kg),Descanso (seg)";
+    const header = "Treino,Exercício,Grupo,Séries,Reps,Carga (kg),Descanso (seg)";
     const rows = [
-      "Seg,Supino Reto com Barra,Peito,4,10,60,90",
-      "Seg,Rosca Direta com Barra,Bíceps,3,12,40,60",
-      "Ter,Pulldown (Puxada Frontal),Costas,4,10,55,90",
-      "Ter,Desenvolvimento com Halteres,Ombros,3,12,20,60",
-      "Qua,Agachamento Livre com Barra,Quadríceps,4,8,80,120",
-      "Qua,Hip Thrust com Barra,Glúteos,4,12,60,90",
+      "Treino A,Supino Reto com Barra,Peito,4,10,60,90",
+      "Treino A,Rosca Direta com Barra,Bíceps,3,12,40,60",
+      "Treino B,Pulldown (Puxada Frontal),Costas,4,10,55,90",
+      "Treino B,Desenvolvimento com Halteres,Ombros,3,12,20,60",
+      "Treino C,Agachamento Livre com Barra,Quadríceps,4,8,80,120",
+      "Treino C,Hip Thrust com Barra,Glúteos,4,12,60,90",
     ];
     const csv = [header, ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -907,47 +933,52 @@ function ImportScreen({ onClose, onImport }) {
     const lines = text.trim().split("\n").filter(l => l.trim());
     if (lines.length < 2) throw new Error("Arquivo vazio ou sem dados.");
 
-    // Detect separator
     const sep = lines[0].includes(";") ? ";" : ",";
     const headers = lines[0].split(sep).map(h => h.trim().toLowerCase());
 
-    const dayIdx = headers.findIndex(h => h.includes("dia"));
+    const workoutIdx = headers.findIndex(h => h.includes("treino") || h.includes("dia"));
     const nameIdx = headers.findIndex(h => h.includes("exerc"));
     const groupIdx = headers.findIndex(h => h.includes("grupo"));
-    const setsIdx = headers.findIndex(h => h.includes("sér") || h.includes("serie"));
+    const setsIdx = headers.findIndex(h => h.includes("sér") || h.includes("serie") || h.includes("séri"));
     const repsIdx = headers.findIndex(h => h.includes("rep"));
     const weightIdx = headers.findIndex(h => h.includes("carga") || h.includes("kg"));
     const restIdx = headers.findIndex(h => h.includes("descanso") || h.includes("seg"));
 
-    if (dayIdx === -1 || nameIdx === -1) throw new Error("Colunas 'Dia' e 'Exercício' são obrigatórias.");
+    if (workoutIdx === -1 || nameIdx === -1) throw new Error("Colunas 'Treino' e 'Exercício' são obrigatórias.");
 
-    const WEEKDAYS_PT = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
-    const workouts = WEEKDAYS_PT.reduce((acc, d) => ({ ...acc, [d]: [] }), {});
+    // Group exercises by workout name (free name, not fixed days)
+    const workoutMap = new Map(); // name -> [exercises]
 
     for (let i = 1; i < lines.length; i++) {
       const cols = lines[i].split(sep).map(c => c.trim().replace(/^"|"$/g, ""));
-      const day = cols[dayIdx];
-      if (!WEEKDAYS_PT.includes(day)) continue;
+      const workoutName = cols[workoutIdx] || "";
+      const exName = cols[nameIdx] || "";
+      if (!workoutName || !exName) continue;
 
-      const name = cols[nameIdx] || "";
       const group = groupIdx !== -1 ? cols[groupIdx] : "Core";
       const sets = setsIdx !== -1 ? Math.max(1, parseInt(cols[setsIdx]) || 3) : 3;
       const reps = repsIdx !== -1 ? Math.max(1, parseInt(cols[repsIdx]) || 12) : 12;
       const weight = weightIdx !== -1 ? parseFloat(cols[weightIdx]) || null : null;
       const restTime = restIdx !== -1 ? parseInt(cols[restIdx]) || 90 : 90;
 
-      if (!name) continue;
-
-      workouts[day].push({
+      if (!workoutMap.has(workoutName)) workoutMap.set(workoutName, []);
+      workoutMap.get(workoutName).push({
         id: Math.random().toString(36).slice(2, 9),
-        name, group, sets, reps, unit: "kg", weight, restTime,
+        name: exName, group, sets, reps, unit: "kg", weight, restTime,
         setWeights: Array(sets).fill(weight ? String(weight) : ""),
         done: [],
       });
     }
 
-    const total = Object.values(workouts).reduce((s, arr) => s + arr.length, 0);
-    if (total === 0) throw new Error("Nenhum exercício encontrado. Verifique os dias (Seg, Ter, Qua...).");
+    if (workoutMap.size === 0) throw new Error("Nenhum exercício encontrado. Verifique o arquivo.");
+
+    const workouts = Array.from(workoutMap.entries()).map(([name, exercises]) => ({
+      id: Math.random().toString(36).slice(2, 9),
+      name,
+      exercises,
+    }));
+
+    const total = workouts.reduce((s, w) => s + w.exercises.length, 0);
     return { workouts, total };
   }
 
@@ -962,7 +993,7 @@ function ImportScreen({ onClose, onImport }) {
         const { workouts, total } = parseCSV(e.target.result);
         setStatus("success");
         setMessage(`${total} exercício${total > 1 ? "s" : ""} importado${total > 1 ? "s" : ""} com sucesso!`);
-        setTimeout(() => onImport(workouts), 1200);
+        setTimeout(() => onImport({ workouts }), 1200);
       } catch (err) {
         setStatus("error"); setMessage(err.message);
       }
@@ -1043,15 +1074,15 @@ function ImportScreen({ onClose, onImport }) {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
               <thead>
                 <tr>
-                  {["Dia", "Exercício", "Grupo", "Séries", "Reps", "Carga (kg)", "Descanso (seg)"].map(h => (
+                  {["Treino", "Exercício", "Grupo", "Séries", "Reps", "Carga (kg)", "Descanso (seg)"].map(h => (
                     <th key={h} style={{ padding: "6px 10px", background: "#1f2937", color: "#6b7280", fontWeight: 700, textAlign: "left", whiteSpace: "nowrap" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {[
-                  ["Seg", "Supino Reto", "Peito", "4", "10", "60", "90"],
-                  ["Ter", "Pulldown", "Costas", "4", "10", "55", "90"],
+                  ["Treino A", "Supino Reto", "Peito", "4", "10", "60", "90"],
+                  ["Treino B", "Pulldown", "Costas", "4", "10", "55", "90"],
                 ].map((row, i) => (
                   <tr key={i}>
                     {row.map((cell, j) => (
@@ -1094,6 +1125,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
   const [showImport, setShowImport] = useState(false);
   const [showReset, setShowReset] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [lightTheme, setLightTheme] = useState(() => localStorage.getItem('trainefy_theme') === 'light');
   const [showNewWorkout, setShowNewWorkout] = useState(false);
   const [newWorkoutName, setNewWorkoutName] = useState('');
   const [editingWorkoutId, setEditingWorkoutId] = useState(null);
@@ -1286,25 +1318,25 @@ export default function WorkoutTracker({ userId, userEmail }) {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "#0a0f1a",
+      background: lightTheme ? "#f1f5f9" : "#0a0f1a",
       fontFamily: "system-ui, -apple-system, sans-serif",
     }}>
 
       {/* ── FIXED HEADER ── */}
-      <div ref={headerRef} style={{
+      <div ref={headerRef} id="fixed-header" style={{
         position: "fixed",
         top: 0,
         left: 0,
         right: 0,
         zIndex: 50,
-        background: "#0a0f1a",
+        background: lightTheme ? "#f1f5f9" : "#0a0f1a",
         paddingTop: "env(safe-area-inset-top)",
       }}>
         <div style={{ padding: "12px 20px 0" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span onClick={handleLogoClick} style={{ fontSize: 28, fontWeight: 900, color: "#a3e635", letterSpacing: "3px", cursor: "default", userSelect: "none", lineHeight: 1 }}>TRAINEFY</span>
+                <span onClick={handleLogoClick} style={{ fontSize: 28, fontWeight: 900, color: lightTheme ? "#16a34a" : "#a3e635", letterSpacing: "3px", cursor: "default", userSelect: "none", lineHeight: 1 }}>TRAINEFY</span>
                 <span style={{ fontSize: 10, color: "#a3e635", opacity: savedFlash ? 1 : 0, transition: "opacity 0.3s", fontWeight: 600 }}>✓ salvo</span>
               </div>
             </div>
@@ -1315,17 +1347,21 @@ export default function WorkoutTracker({ userId, userEmail }) {
               {showMenu && (
                 <>
                   <div onClick={() => setShowMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 10, WebkitTapHighlightColor: "transparent" }} />
-                  <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 20, background: "#1f2937", borderRadius: 14, border: "1px solid #374151", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", minWidth: 180 }}>
-                    <button onClick={() => { setShowHistory(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 20, background: lightTheme ? "#ffffff" : "#1f2937", borderRadius: 14, border: lightTheme ? "1px solid #e2e8f0" : "1px solid #374151", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.2)", minWidth: 180 }}>
+                    <button onClick={() => { setShowHistory(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: lightTheme ? "#1e293b" : "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10 }}>
                       <span>📊</span> Histórico
                     </button>
                     <div style={{ height: 1, background: "#374151" }} />
-                    <button onClick={() => { setShowImport(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10 }}>
+                    <button onClick={() => { setShowImport(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: lightTheme ? "#1e293b" : "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10 }}>
                       <span>📥</span> Importar treino
                     </button>
                     <div style={{ height: 1, background: "#374151" }} />
                     <button onClick={() => { setShowReset(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#ef4444", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10 }}>
                       <span>🗑️</span> Zerar dados
+                    </button>
+                    <div style={{ height: 1, background: "#374151" }} />
+                    <button onClick={() => { setLightTheme(v => { const next = !v; localStorage.setItem('trainefy_theme', next ? 'light' : 'dark'); return next; }); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: lightTheme ? "#1e293b" : "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10 }}>
+                      <span>{lightTheme ? "🌙" : "☀️"}</span> {lightTheme ? "Modo escuro" : "Modo claro"}
                     </button>
                     <div style={{ height: 1, background: "#374151" }} />
                     <button onClick={() => supabase.auth.signOut()} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#9ca3af", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10 }}>
@@ -1366,7 +1402,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
                       onTouchEnd={() => { clearTimeout(longPressTimer); setLongPressTimer(null); }}
                       onTouchMove={() => { clearTimeout(longPressTimer); setLongPressTimer(null); }}
                       onContextMenu={e => e.preventDefault()}
-                      style={{ position: "relative", background: isActive ? "#a3e635" : "#1f2937", border: isActive ? "none" : "1.5px solid #374151", borderRadius: 10, padding: "8px 14px", cursor: sessionActive ? "default" : "pointer", fontSize: 14, fontWeight: isActive ? 700 : 500, color: isActive ? "#0a0a0a" : "#d1d5db", opacity: sessionActive && !isActive ? 0.4 : 1, userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none" }}
+                      style={{ position: "relative", background: isActive ? "#a3e635" : "#1f2937", border: isActive ? "none" : "1.5px solid #374151", borderRadius: 10, padding: "8px 14px", cursor: sessionActive ? "default" : "pointer", fontSize: 14, fontWeight: isActive ? 700 : 500, color: isActive ? "#0a0a0a" : lightTheme ? "#475569" : "#d1d5db", opacity: sessionActive && !isActive ? 0.4 : 1, userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none" }}
                     >
                       {w.name}
                       {isDone && !isActive && <span style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: "50%", background: "#a3e635" }} />}
@@ -1374,11 +1410,15 @@ export default function WorkoutTracker({ userId, userEmail }) {
                   )}
                   {editingWorkoutId === w.id + "_menu" && (
                     <>
-                      <div onClick={() => setEditingWorkoutId(null)} style={{ position: "fixed", inset: 0, zIndex: 10 }} />
-                      <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 20, background: "#1f2937", borderRadius: 12, border: "1px solid #374151", overflow: "hidden", boxShadow: "0 8px 24px rgba(0,0,0,0.5)", minWidth: 160 }}>
-                        <button onClick={() => { setEditingWorkoutId(w.id); setEditingWorkoutName(w.name); }} style={{ width: "100%", background: "none", border: "none", padding: "13px 16px", cursor: "pointer", color: "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>✏️ Renomear</button>
+                      <div onClick={() => setEditingWorkoutId(null)} style={{ position: "fixed", inset: 0, zIndex: 998 }} />
+                      <div style={{ position: "fixed", top: 120, left: 20, right: 20, zIndex: 999, background: "#1f2937", borderRadius: 16, border: "1px solid #374151", overflow: "hidden", boxShadow: "0 16px 48px rgba(0,0,0,0.8)" }}>
+                        <p style={{ margin: 0, padding: "14px 18px 10px", fontSize: 12, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: "1px" }}>{w.name}</p>
                         <div style={{ height: 1, background: "#374151" }} />
-                        <button onClick={() => { deleteWorkout(i); setEditingWorkoutId(null); }} style={{ width: "100%", background: "none", border: "none", padding: "13px 16px", cursor: "pointer", color: "#ef4444", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>🗑️ Excluir treino</button>
+                        <button onClick={() => { setEditingWorkoutId(w.id); setEditingWorkoutName(w.name); }} style={{ width: "100%", background: "none", border: "none", padding: "16px 18px", cursor: "pointer", color: "#f9fafb", fontSize: 15, fontWeight: 600, display: "flex", alignItems: "center", gap: 12 }}>✏️ Renomear treino</button>
+                        <div style={{ height: 1, background: "#374151" }} />
+                        <button onClick={() => { deleteWorkout(i); setEditingWorkoutId(null); }} style={{ width: "100%", background: "none", border: "none", padding: "16px 18px", cursor: "pointer", color: "#ef4444", fontSize: 15, fontWeight: 600, display: "flex", alignItems: "center", gap: 12 }}>🗑️ Excluir treino</button>
+                        <div style={{ height: 1, background: "#374151" }} />
+                        <button onClick={() => setEditingWorkoutId(null)} style={{ width: "100%", background: "none", border: "none", padding: "16px 18px", cursor: "pointer", color: "#6b7280", fontSize: 15, fontWeight: 600 }}>Cancelar</button>
                       </div>
                     </>
                   )}
@@ -1425,6 +1465,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
         overflowY: "auto",
         WebkitOverflowScrolling: "touch",
         minHeight: "100vh",
+        background: lightTheme ? "#f1f5f9" : "#0a0f1a",
       }}>
         {workouts.length === 0 ? (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
@@ -1445,21 +1486,21 @@ export default function WorkoutTracker({ userId, userEmail }) {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {exercises.map(ex => (
-              <ExerciseCard key={ex.id} exercise={ex} onRemove={removeExercise} onToggleSet={toggleSet} onUpdateSetWeight={updateSetWeight} onUpdateExercise={updateExercise} sessionActive={sessionActive} />
+              <ExerciseCard key={ex.id} exercise={ex} onRemove={removeExercise} onToggleSet={toggleSet} onUpdateSetWeight={updateSetWeight} onUpdateExercise={updateExercise} sessionActive={sessionActive} lightTheme={lightTheme} />
             ))}
           </div>
         )}
       </div>
 
       {/* ── FIXED BOTTOM BAR ── */}
-      <div style={{
+      <div id="fixed-bottom" style={{
         position: "fixed",
         bottom: 0,
         left: 0,
         right: 0,
         zIndex: 50,
-        background: "#0a0f1a",
-        borderTop: "1px solid #1a2234",
+        background: lightTheme ? "#f1f5f9" : "#0a0f1a",
+        borderTop: lightTheme ? "1px solid #e2e8f0" : "1px solid #1a2234",
         paddingTop: 12,
         paddingLeft: 20,
         paddingRight: 20,
