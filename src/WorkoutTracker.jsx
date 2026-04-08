@@ -1574,10 +1574,7 @@ Regras: separador vírgula, sem aspas, carga em kg (0 para bodyweight), descanso
             <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#f9fafb" }}>Cole a resposta da IA</p>
           </div>
           <textarea value={pastedText} onChange={e => { setPastedText(e.target.value); setImportStatus(null); }}
-            placeholder={"Cole aqui o CSV gerado pela IA...
-
-Treino,Exercício,Grupo,Séries,Reps,Carga (kg),Descanso (seg)
-Treino A,Supino Reto com Barra,Peito,4,10,60,90"}
+            placeholder={"Cole aqui o CSV gerado pela IA...\n\nTreino,Exercício,Grupo,Séries,Reps,Carga (kg),Descanso (seg)\nTreino A,Supino Reto com Barra,Peito,4,10,60,90"}
             style={{
               width: "100%", minHeight: 130, background: "#0d1524",
               border: "1.5px solid #374151", borderRadius: 10,
