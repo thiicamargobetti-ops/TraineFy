@@ -1273,7 +1273,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
   }} />;
 
   return (
-    <div style={{ height: "100dvh", background: "#0a0f1a", fontFamily: "system-ui, -apple-system, sans-serif", display: "flex", flexDirection: "column", maxWidth: 480, margin: "0 auto", overflow: "hidden" }}>
+    <div style={{ height: "100dvh", background: "#0a0f1a", fontFamily: "system-ui, -apple-system, sans-serif", display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
       {/* ── FIXED TOP ── */}
       <div style={{ flexShrink: 0, background: "#0a0f1a" }}>
@@ -1286,7 +1286,6 @@ export default function WorkoutTracker({ userId, userEmail }) {
                 <span onClick={handleLogoClick} style={{ fontSize: 30, fontWeight: 900, color: "#a3e635", letterSpacing: "3px", cursor: "default", userSelect: "none", lineHeight: 1 }}>TRAINEFY</span>
                 <span style={{ fontSize: 10, color: "#a3e635", opacity: savedFlash ? 1 : 0, transition: "opacity 0.3s", fontWeight: 600 }}>✓ salvo</span>
               </div>
-              <span style={{ fontSize: 11, color: "#4b5563", fontWeight: 400 }}>{userEmail}</span>
             </div>
             <div style={{ position: "relative" }}>
               <button onClick={() => setShowMenu(v => !v)} style={{ background: showMenu ? "#374151" : "#1f2937", border: "1px solid #374151", borderRadius: 10, width: 44, height: 44, cursor: "pointer", color: "#9ca3af", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.15s" }}>
@@ -1379,12 +1378,15 @@ export default function WorkoutTracker({ userId, userEmail }) {
             {workouts.length < MAX_WORKOUTS && !sessionActive && (
               <button onClick={() => setShowNewWorkout(true)} style={{ background: "#1f2937", border: "1.5px dashed #374151", borderRadius: 10, width: 38, height: 38, cursor: "pointer", color: "#6b7280", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>+</button>
             )}
-            {exercises.length > 0 && (
-              <div style={{ marginLeft: "auto", textAlign: "right", paddingLeft: 8 }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: "#a3e635" }}>{doneCount}/{exercises.length}</div>
-                <div style={{ fontSize: 10, color: "#4b5563" }}>exercícios</div>
-              </div>
-            )}
+            <div style={{ marginLeft: "auto", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
+              <span style={{ fontSize: 10, color: "#374151", fontWeight: 400 }}>{userEmail}</span>
+              {exercises.length > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "#a3e635" }}>{doneCount}/{exercises.length}</span>
+                  <span style={{ fontSize: 10, color: "#4b5563" }}>exercícios</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1422,7 +1424,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
       </div>
 
       {/* ── FIXED BOTTOM BAR ── */}
-      <div style={{ flexShrink: 0, padding: "10px 20px", paddingBottom: "max(14px, env(safe-area-inset-bottom))", background: "#0a0f1a", borderTop: "1px solid #1a2234" }}>
+      <div style={{ flexShrink: 0, padding: "10px 20px", paddingBottom: "max(20px, env(safe-area-inset-bottom))", background: "#0a0f1a", borderTop: "1px solid #1a2234", marginTop: "auto" }}>
         {showFinishConfirm && (
           <div style={{ background: "#1f2937", borderRadius: 14, padding: "14px 16px", border: "1px solid #374151", marginBottom: 10 }}>
             <p style={{ margin: "0 0 4px", fontSize: 14, color: "#f9fafb", fontWeight: 700 }}>Finalizar treino?</p>
