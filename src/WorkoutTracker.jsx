@@ -843,6 +843,94 @@ function Copyright() {
   );
 }
 
+// ── WORKOUT SUMMARY ───────────────────────────────────────────────────────
+function WorkoutSummary({ session, onClose }) {
+  const { workoutName, date, duration, volume, exercises = [] } = session;
+
+  const totalSets = exercises.reduce((a, ex) => a + ex.done.length, 0);
+  const totalExs  = exercises.filter(ex => ex.done.length > 0).length;
+
+  const MUSCLE_COLORS_S = {
+    Peito: "#f97316", Costas: "#3b82f6", Quadríceps: "#eab308",
+    "Post. Coxa": "#f59e0b", Glúteos: "#ec4899", Panturrilha: "#14b8a6",
+    Bíceps: "#a78bfa", Tríceps: "#6366f1", Ombros: "#a855f7",
+    Trapézio: "#64748b", Antebraço: "#0ea5e9", Core: "#ef4444",
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#0a0f1a", fontFamily: "system-ui, -apple-system, sans-serif", display: "flex", flexDirection: "column" }}>
+
+      {/* Hero section */}
+      <div style={{ background: "linear-gradient(160deg, #0f1f0a 0%, #0a0f1a 60%)", paddingTop: "calc(env(safe-area-inset-top) + 40px)", paddingBottom: 32, paddingLeft: 24, paddingRight: 24, textAlign: "center" }}>
+        <div style={{ fontSize: 64, marginBottom: 12, animation: "popIn 0.4s ease" }}>🏆</div>
+        <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: "#a3e635", letterSpacing: "2px", textTransform: "uppercase" }}>Treino concluído!</p>
+        <h1 style={{ margin: "0 0 4px", fontSize: 26, fontWeight: 900, color: "#f9fafb" }}>{workoutName}</h1>
+        <p style={{ margin: 0, fontSize: 13, color: "#4b5563" }}>{date}</p>
+      </div>
+
+      {/* Stats row */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, padding: "0 16px", marginTop: -16, marginBottom: 20 }}>
+        {[
+          { icon: "⏱", label: "Duração",   value: duration },
+          { icon: "📦", label: "Volume",    value: `${Math.round(volume)}kg` },
+          { icon: "✅", label: "Séries",    value: totalSets },
+        ].map(({ icon, label, value }) => (
+          <div key={label} style={{ background: "#111827", borderRadius: 16, padding: "16px 10px", textAlign: "center", border: "1px solid #1f2937" }}>
+            <div style={{ fontSize: 20, marginBottom: 4 }}>{icon}</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#a3e635" }}>{value}</div>
+            <div style={{ fontSize: 10, color: "#4b5563", fontWeight: 600, marginTop: 2 }}>{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Exercise list */}
+      <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "0 16px", paddingBottom: "calc(env(safe-area-inset-bottom) + 100px)" }}>
+        <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#4b5563", textTransform: "uppercase", letterSpacing: "1.5px" }}>
+          {totalExs} exercício{totalExs !== 1 ? "s" : ""} realizados
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {exercises.filter(ex => ex.done.length > 0).map((ex, i) => {
+            const color = MUSCLE_COLORS_S[ex.group] || "#6b7280";
+            const weights = (ex.setWeights || []).filter(w => Number(w) > 0).map(Number);
+            const maxW = weights.length ? Math.max(...weights) : null;
+            const seriesCompleted = ex.done.length;
+            return (
+              <div key={i} style={{ background: "#111827", borderRadius: 14, padding: "14px 16px", border: `1px solid ${color}22`, display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#f9fafb" }}>{ex.name}</p>
+                  <p style={{ margin: "2px 0 0", fontSize: 11, color: "#4b5563" }}>{ex.group}</p>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color }}>
+                    {maxW ? `${maxW}kg` : `${seriesCompleted}x`}
+                  </p>
+                  <p style={{ margin: 0, fontSize: 11, color: "#4b5563" }}>{seriesCompleted} série{seriesCompleted !== 1 ? "s" : ""}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Bottom CTA */}
+      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, padding: "12px 16px", paddingBottom: "max(20px, env(safe-area-inset-bottom))", background: "linear-gradient(to top, #0a0f1a 70%, transparent)" }}>
+        <button onClick={onClose} style={{ width: "100%", background: "#a3e635", border: "none", borderRadius: 16, padding: "16px 0", cursor: "pointer", color: "#0a0a0a", fontSize: 16, fontWeight: 900, letterSpacing: "0.5px" }}>
+          Concluir 💪
+        </button>
+      </div>
+
+      <style>{`
+        @keyframes popIn {
+          0% { transform: scale(0.5); opacity: 0; }
+          70% { transform: scale(1.15); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 // ── DASHBOARD SCREEN ──────────────────────────────────────────────────────
 function DashboardScreen({ history, workouts, onClose }) {
   const [aiText, setAiText] = useState("");
@@ -1410,6 +1498,8 @@ export default function WorkoutTracker({ userId, userEmail }) {
   }, []);
   const [sessionActive, setSessionActive] = useState(false);
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [lastSession, setLastSession] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showReset, setShowReset] = useState(false);
@@ -1569,10 +1659,11 @@ export default function WorkoutTracker({ userId, userEmail }) {
     setHistory(newHistory);
     saveHistory(newHistory);
     saveHistoryToCloud(userId, newHistory).catch(e => console.warn("Erro ao salvar histórico:", e));
-    // Reset done in active workout
     updateExercises(prev => prev.map(ex => ({ ...ex, done: [] })));
     setSessionActive(false);
     setShowFinishConfirm(false);
+    setLastSession(session);
+    setShowSummary(true);
   }
 
   function handleLogoClick() {
@@ -1614,6 +1705,13 @@ export default function WorkoutTracker({ userId, userEmail }) {
   }
 
   // ── HOME SCREEN ──────────────────────────────────────────────────────────
+  if (showSummary && lastSession) return (
+    <WorkoutSummary
+      session={lastSession}
+      onClose={() => { setShowSummary(false); setScreen("home"); }}
+    />
+  );
+
   if (showDashboard) return <DashboardScreen history={history} workouts={workouts} onClose={() => setShowDashboard(false)} />;
 
   if (screen === "home") return (
