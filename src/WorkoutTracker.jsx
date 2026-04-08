@@ -1077,6 +1077,17 @@ export default function WorkoutTracker({ userId, userEmail }) {
   const [showPicker, setShowPicker] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
   const tripleClickRef = useRef({ count: 0, timer: null });
+  const headerRef = useRef(null);
+  const [headerHeight, setHeaderHeight] = useState(140);
+
+  useEffect(() => {
+    if (!headerRef.current) return;
+    const obs = new ResizeObserver(entries => {
+      for (const e of entries) setHeaderHeight(e.contentRect.height);
+    });
+    obs.observe(headerRef.current);
+    return () => obs.disconnect();
+  }, []);
   const [sessionActive, setSessionActive] = useState(false);
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -1273,17 +1284,27 @@ export default function WorkoutTracker({ userId, userEmail }) {
   }} />;
 
   return (
-    <div style={{ height: "100dvh", background: "#0a0f1a", fontFamily: "system-ui, -apple-system, sans-serif", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{
+      minHeight: "100vh",
+      background: "#0a0f1a",
+      fontFamily: "system-ui, -apple-system, sans-serif",
+    }}>
 
-      {/* ── FIXED TOP ── */}
-      <div style={{ flexShrink: 0, background: "#0a0f1a" }}>
-
-        {/* Header */}
-        <div style={{ padding: "env(safe-area-inset-top, 12px) 20px 0", paddingTop: "max(12px, env(safe-area-inset-top))" }}>
+      {/* ── FIXED HEADER ── */}
+      <div ref={headerRef} style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 50,
+        background: "#0a0f1a",
+        paddingTop: "env(safe-area-inset-top)",
+      }}>
+        <div style={{ padding: "12px 20px 0" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span onClick={handleLogoClick} style={{ fontSize: 30, fontWeight: 900, color: "#a3e635", letterSpacing: "3px", cursor: "default", userSelect: "none", lineHeight: 1 }}>TRAINEFY</span>
+                <span onClick={handleLogoClick} style={{ fontSize: 28, fontWeight: 900, color: "#a3e635", letterSpacing: "3px", cursor: "default", userSelect: "none", lineHeight: 1 }}>TRAINEFY</span>
                 <span style={{ fontSize: 10, color: "#a3e635", opacity: savedFlash ? 1 : 0, transition: "opacity 0.3s", fontWeight: 600 }}>✓ salvo</span>
               </div>
             </div>
@@ -1295,20 +1316,20 @@ export default function WorkoutTracker({ userId, userEmail }) {
                 <>
                   <div onClick={() => setShowMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 10, WebkitTapHighlightColor: "transparent" }} />
                   <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 20, background: "#1f2937", borderRadius: 14, border: "1px solid #374151", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", minWidth: 180 }}>
-                    <button onClick={() => { setShowHistory(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
-                      <span style={{ fontSize: 16 }}>📊</span> Histórico
+                    <button onClick={() => { setShowHistory(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10 }}>
+                      <span>📊</span> Histórico
                     </button>
                     <div style={{ height: 1, background: "#374151" }} />
-                    <button onClick={() => { setShowImport(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
-                      <span style={{ fontSize: 16 }}>📥</span> Importar treino
+                    <button onClick={() => { setShowImport(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10 }}>
+                      <span>📥</span> Importar treino
                     </button>
                     <div style={{ height: 1, background: "#374151" }} />
-                    <button onClick={() => { setShowReset(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#ef4444", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
-                      <span style={{ fontSize: 16 }}>🗑️</span> Zerar dados
+                    <button onClick={() => { setShowReset(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#ef4444", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10 }}>
+                      <span>🗑️</span> Zerar dados
                     </button>
                     <div style={{ height: 1, background: "#374151" }} />
-                    <button onClick={() => supabase.auth.signOut()} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#9ca3af", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
-                      <span style={{ fontSize: 16 }}>→</span> Sair
+                    <button onClick={() => supabase.auth.signOut()} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#9ca3af", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10 }}>
+                      <span>→</span> Sair
                     </button>
                   </div>
                 </>
@@ -1316,29 +1337,14 @@ export default function WorkoutTracker({ userId, userEmail }) {
             </div>
           </div>
 
-          {/* Stats row */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-            {volume > 0
-              ? <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>Volume: <strong style={{ color: "#a3e635" }}>{Math.round(volume)}kg</strong></p>
-              : <span />}
-            {sessionActive && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#a3e63522", borderRadius: 20, padding: "4px 12px" }}>
-                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#a3e635", animation: "pulse 1.5s infinite" }} />
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#a3e635" }}>em treino</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Workout Tabs */}
-        <div style={{ padding: "8px 20px 6px", overflowX: "auto" }}>
-          <div style={{ display: "flex", gap: 8, minWidth: "max-content", alignItems: "center" }}>
+          {/* Tabs + stats */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, overflowX: "auto", paddingBottom: 8 }}>
             {workouts.map((w, i) => {
               const isActive = i === activeIdx;
               const isDone = w.exercises.length > 0 && w.exercises.every(e => e.done.length === e.sets);
               const isRenaming = editingWorkoutId === w.id;
               return (
-                <div key={w.id} style={{ position: "relative" }}>
+                <div key={w.id} style={{ position: "relative", flexShrink: 0 }}>
                   {isRenaming ? (
                     <input autoFocus value={editingWorkoutName}
                       onChange={e => setEditingWorkoutName(e.target.value)}
@@ -1349,19 +1355,18 @@ export default function WorkoutTracker({ userId, userEmail }) {
                   ) : (
                     <button
                       onClick={() => { if (!sessionActive) { setActiveIdx(i); setShowMenu(false); } }}
-                      onTouchStart={(e) => {
+                      onTouchStart={() => {
                         if (sessionActive) return;
-                        e.preventDefault();
                         const t = setTimeout(() => {
                           setEditingWorkoutId(w.id + "_menu");
                           setLongPressTimer(null);
-                        }, 500);
+                        }, 600);
                         setLongPressTimer(t);
                       }}
-                      onTouchEnd={() => { if (longPressTimer) { clearTimeout(longPressTimer); setLongPressTimer(null); } }}
-                      onTouchMove={() => { if (longPressTimer) { clearTimeout(longPressTimer); setLongPressTimer(null); } }}
+                      onTouchEnd={() => { clearTimeout(longPressTimer); setLongPressTimer(null); }}
+                      onTouchMove={() => { clearTimeout(longPressTimer); setLongPressTimer(null); }}
                       onContextMenu={e => e.preventDefault()}
-                      style={{ position: "relative", background: isActive ? "#a3e635" : "#1f2937", border: isActive ? "none" : "1.5px solid #374151", borderRadius: 10, padding: "8px 14px", cursor: sessionActive ? "default" : "pointer", fontSize: 14, fontWeight: isActive ? 700 : 500, color: isActive ? "#0a0a0a" : "#d1d5db", opacity: sessionActive && !isActive ? 0.4 : 1, transition: "all 0.15s", userSelect: "none", WebkitUserSelect: "none", touchAction: "none" }}
+                      style={{ position: "relative", background: isActive ? "#a3e635" : "#1f2937", border: isActive ? "none" : "1.5px solid #374151", borderRadius: 10, padding: "8px 14px", cursor: sessionActive ? "default" : "pointer", fontSize: 14, fontWeight: isActive ? 700 : 500, color: isActive ? "#0a0a0a" : "#d1d5db", opacity: sessionActive && !isActive ? 0.4 : 1, userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none" }}
                     >
                       {w.name}
                       {isDone && !isActive && <span style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: "50%", background: "#a3e635" }} />}
@@ -1371,9 +1376,9 @@ export default function WorkoutTracker({ userId, userEmail }) {
                     <>
                       <div onClick={() => setEditingWorkoutId(null)} style={{ position: "fixed", inset: 0, zIndex: 10 }} />
                       <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 20, background: "#1f2937", borderRadius: 12, border: "1px solid #374151", overflow: "hidden", boxShadow: "0 8px 24px rgba(0,0,0,0.5)", minWidth: 160 }}>
-                        <button onClick={() => { setEditingWorkoutId(w.id); setEditingWorkoutName(w.name); }} style={{ width: "100%", background: "none", border: "none", padding: "13px 16px", cursor: "pointer", color: "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, textAlign: "left" }}>✏️ Renomear</button>
+                        <button onClick={() => { setEditingWorkoutId(w.id); setEditingWorkoutName(w.name); }} style={{ width: "100%", background: "none", border: "none", padding: "13px 16px", cursor: "pointer", color: "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>✏️ Renomear</button>
                         <div style={{ height: 1, background: "#374151" }} />
-                        <button onClick={() => { deleteWorkout(i); setEditingWorkoutId(null); }} style={{ width: "100%", background: "none", border: "none", padding: "13px 16px", cursor: "pointer", color: "#ef4444", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, textAlign: "left" }}>🗑️ Excluir</button>
+                        <button onClick={() => { deleteWorkout(i); setEditingWorkoutId(null); }} style={{ width: "100%", background: "none", border: "none", padding: "13px 16px", cursor: "pointer", color: "#ef4444", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>🗑️ Excluir treino</button>
                       </div>
                     </>
                   )}
@@ -1383,53 +1388,83 @@ export default function WorkoutTracker({ userId, userEmail }) {
             {workouts.length < MAX_WORKOUTS && !sessionActive && (
               <button onClick={() => setShowNewWorkout(true)} style={{ background: "#1f2937", border: "1.5px dashed #374151", borderRadius: 10, width: 38, height: 38, cursor: "pointer", color: "#6b7280", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>+</button>
             )}
-            <div style={{ marginLeft: "auto", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
-              <span style={{ fontSize: 10, color: "#374151", fontWeight: 400 }}>{userEmail}</span>
-              {exercises.length > 0 && (
-                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: "#a3e635" }}>{doneCount}/{exercises.length}</span>
-                  <span style={{ fontSize: 10, color: "#4b5563" }}>exercícios</span>
-                </div>
-              )}
-            </div>
+            {exercises.length > 0 && (
+              <div style={{ marginLeft: "auto", flexShrink: 0, textAlign: "right" }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "#a3e635" }}>{doneCount}/{exercises.length}</div>
+                <div style={{ fontSize: 10, color: "#4b5563" }}>exercícios</div>
+              </div>
+            )}
           </div>
-        </div>
 
-        {/* Progress Bar */}
-        {exercises.length > 0 && (
-          <div style={{ margin: "4px 20px 8px", height: 3, background: "#1f2937", borderRadius: 2 }}>
-            <div style={{ height: "100%", borderRadius: 2, background: "#a3e635", width: `${(doneCount / exercises.length) * 100}%`, transition: "width 0.4s ease" }} />
+          {/* Stats + progress */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: 6 }}>
+            {volume > 0
+              ? <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>Volume: <strong style={{ color: "#a3e635" }}>{Math.round(volume)}kg</strong></p>
+              : <span />}
+            {sessionActive && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#a3e63522", borderRadius: 20, padding: "4px 12px" }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#a3e635", animation: "pulse 1.5s infinite" }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#a3e635" }}>em treino</span>
+              </div>
+            )}
           </div>
-        )}
+          {exercises.length > 0 && (
+            <div style={{ height: 3, background: "#1f2937", borderRadius: 2, marginBottom: 2 }}>
+              <div style={{ height: "100%", borderRadius: 2, background: "#a3e635", width: `${(doneCount / exercises.length) * 100}%`, transition: "width 0.4s ease" }} />
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* ── SCROLLABLE LIST ── */}
-      <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "8px 20px 16px", minHeight: 0 }}>
+      {/* ── SCROLLABLE CONTENT ── */}
+      <div id="scroll-area" style={{
+        paddingTop: headerHeight + 8,
+        paddingBottom: "calc(env(safe-area-inset-bottom) + 90px)",
+        paddingLeft: 20,
+        paddingRight: 20,
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
+        minHeight: "100vh",
+      }}>
         {workouts.length === 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", padding: "20px" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
             <div style={{ fontSize: 56 }}>🏋️</div>
             <p style={{ fontSize: 18, fontWeight: 700, color: "#f9fafb", margin: "16px 0 8px", textAlign: "center" }}>Nenhum treino ainda</p>
             <p style={{ fontSize: 14, color: "#4b5563", margin: "0 0 28px", textAlign: "center" }}>Crie seu primeiro treino para começar</p>
-            <button onClick={() => setShowNewWorkout(true)} style={{ background: "#a3e635", border: "none", borderRadius: 14, padding: "16px 32px", cursor: "pointer", color: "#0a0a0a", fontSize: 16, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
+            <button onClick={() => setShowNewWorkout(true)} style={{ background: "#a3e635", border: "none", borderRadius: 14, padding: "16px 32px", cursor: "pointer", color: "#0a0a0a", fontSize: 16, fontWeight: 800 }}>
               + Criar primeiro treino
             </button>
           </div>
         ) : exercises.length === 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", padding: "20px" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "50vh" }}>
             <div style={{ fontSize: 48 }}>🏋️</div>
             <p style={{ fontSize: 14, textAlign: "center", margin: "12px 0 0", color: "#4b5563", lineHeight: 1.6 }}>
               Nenhum exercício ainda.<br />Toca em <strong style={{ color: "#a3e635" }}>+ Exercício</strong> para começar.
             </p>
           </div>
-        ) : exercises.map(ex => (
-          <div key={ex.id} style={{ marginBottom: 12 }}>
-            <ExerciseCard exercise={ex} onRemove={removeExercise} onToggleSet={toggleSet} onUpdateSetWeight={updateSetWeight} onUpdateExercise={updateExercise} sessionActive={sessionActive} />
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {exercises.map(ex => (
+              <ExerciseCard key={ex.id} exercise={ex} onRemove={removeExercise} onToggleSet={toggleSet} onUpdateSetWeight={updateSetWeight} onUpdateExercise={updateExercise} sessionActive={sessionActive} />
+            ))}
           </div>
-        ))}
+        )}
       </div>
 
       {/* ── FIXED BOTTOM BAR ── */}
-      <div style={{ flexShrink: 0, padding: "12px 20px 0", paddingBottom: "max(16px, env(safe-area-inset-bottom))", background: "#0a0f1a", borderTop: "1px solid #1a2234" }}>
+      <div style={{
+        position: "fixed",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 50,
+        background: "#0a0f1a",
+        borderTop: "1px solid #1a2234",
+        paddingTop: 12,
+        paddingLeft: 20,
+        paddingRight: 20,
+        paddingBottom: "max(20px, env(safe-area-inset-bottom))",
+      }}>
         {showFinishConfirm && (
           <div style={{ background: "#1f2937", borderRadius: 14, padding: "14px 16px", border: "1px solid #374151", marginBottom: 10 }}>
             <p style={{ margin: "0 0 4px", fontSize: 14, color: "#f9fafb", fontWeight: 700 }}>Finalizar treino?</p>
@@ -1463,7 +1498,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
       {/* New workout modal */}
       {showNewWorkout && (
         <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-          <div style={{ background: "#111827", borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "24px 20px", paddingBottom: "max(40px, env(safe-area-inset-bottom))" }}>
+          <div style={{ background: "#111827", borderRadius: "20px 20px 0 0", width: "100%", padding: "24px 20px", paddingBottom: "max(40px, env(safe-area-inset-bottom))" }}>
             <p style={{ margin: "0 0 16px", fontSize: 17, fontWeight: 700, color: "#f9fafb" }}>Novo treino</p>
             <input autoFocus value={newWorkoutName} onChange={e => setNewWorkoutName(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter" && newWorkoutName.trim()) { createWorkout(newWorkoutName); setNewWorkoutName(""); setShowNewWorkout(false); } }}
@@ -1484,10 +1519,12 @@ export default function WorkoutTracker({ userId, userEmail }) {
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
         ::-webkit-scrollbar { width: 0; }
+        #scroll-area { -webkit-overflow-scrolling: touch; }
       `}</style>
 
       {showPicker && <PickerModal onClose={() => setShowPicker(false)} onAdd={addExercise} />}
     </div>
   );
 }
+
 
