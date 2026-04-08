@@ -1273,13 +1273,13 @@ export default function WorkoutTracker({ userId, userEmail }) {
   }} />;
 
   return (
-    <div style={{ height: "100dvh", background: "#0a0f1a", fontFamily: "system-ui, -apple-system, sans-serif", display: "flex", flexDirection: "column", overflow: "hidden", paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
+    <div style={{ height: "100dvh", background: "#0a0f1a", fontFamily: "system-ui, -apple-system, sans-serif", display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
       {/* ── FIXED TOP ── */}
       <div style={{ flexShrink: 0, background: "#0a0f1a" }}>
 
         {/* Header */}
-        <div style={{ padding: "12px 20px 0" }}>
+        <div style={{ padding: "env(safe-area-inset-top, 12px) 20px 0", paddingTop: "max(12px, env(safe-area-inset-top))" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1349,14 +1349,19 @@ export default function WorkoutTracker({ userId, userEmail }) {
                   ) : (
                     <button
                       onClick={() => { if (!sessionActive) { setActiveIdx(i); setShowMenu(false); } }}
-                      onTouchStart={() => {
+                      onTouchStart={(e) => {
                         if (sessionActive) return;
-                        const t = setTimeout(() => { setEditingWorkoutId(w.id + "_menu"); }, 600);
+                        e.preventDefault();
+                        const t = setTimeout(() => {
+                          setEditingWorkoutId(w.id + "_menu");
+                          setLongPressTimer(null);
+                        }, 500);
                         setLongPressTimer(t);
                       }}
-                      onTouchEnd={() => { clearTimeout(longPressTimer); }}
-                      onTouchMove={() => { clearTimeout(longPressTimer); }}
-                      style={{ position: "relative", background: isActive ? "#a3e635" : "#1f2937", border: isActive ? "none" : "1.5px solid #374151", borderRadius: 10, padding: "8px 14px", cursor: sessionActive ? "default" : "pointer", fontSize: 14, fontWeight: isActive ? 700 : 500, color: isActive ? "#0a0a0a" : "#d1d5db", opacity: sessionActive && !isActive ? 0.4 : 1, transition: "all 0.15s", userSelect: "none" }}
+                      onTouchEnd={() => { if (longPressTimer) { clearTimeout(longPressTimer); setLongPressTimer(null); } }}
+                      onTouchMove={() => { if (longPressTimer) { clearTimeout(longPressTimer); setLongPressTimer(null); } }}
+                      onContextMenu={e => e.preventDefault()}
+                      style={{ position: "relative", background: isActive ? "#a3e635" : "#1f2937", border: isActive ? "none" : "1.5px solid #374151", borderRadius: 10, padding: "8px 14px", cursor: sessionActive ? "default" : "pointer", fontSize: 14, fontWeight: isActive ? 700 : 500, color: isActive ? "#0a0a0a" : "#d1d5db", opacity: sessionActive && !isActive ? 0.4 : 1, transition: "all 0.15s", userSelect: "none", WebkitUserSelect: "none", touchAction: "none" }}
                     >
                       {w.name}
                       {isDone && !isActive && <span style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: "50%", background: "#a3e635" }} />}
@@ -1424,7 +1429,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
       </div>
 
       {/* ── FIXED BOTTOM BAR ── */}
-      <div style={{ flexShrink: 0, padding: "12px 20px 16px", background: "#0a0f1a", borderTop: "1px solid #1a2234" }}>
+      <div style={{ flexShrink: 0, padding: "12px 20px 0", paddingBottom: "max(16px, env(safe-area-inset-bottom))", background: "#0a0f1a", borderTop: "1px solid #1a2234" }}>
         {showFinishConfirm && (
           <div style={{ background: "#1f2937", borderRadius: 14, padding: "14px 16px", border: "1px solid #374151", marginBottom: 10 }}>
             <p style={{ margin: "0 0 4px", fontSize: 14, color: "#f9fafb", fontWeight: 700 }}>Finalizar treino?</p>
