@@ -43,7 +43,8 @@ const storage = {
 };
 
 // ── CONSTANTS ──────────────────────────────────────────────────────────────
-const WEEKDAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+// Treinos com nomes livres — até 5
+const MAX_WORKOUTS = 5;
 const MUSCLE_COLORS = {
   Peito: "#f97316", Costas: "#3b82f6", Quadríceps: "#eab308",
   "Post. Coxa": "#f59e0b", Glúteos: "#ec4899", Panturrilha: "#14b8a6",
@@ -164,23 +165,28 @@ function makeEx(name, group, sets, reps, unit = "kg", restTime = 90) {
   return { id: genId(), name, group, sets, reps, unit, restTime, weight: null, setWeights: Array(sets).fill(""), done: [] };
 }
 
-// Todos os dias começam vazios — cada usuário monta o próprio treino
-const DEFAULT_WORKOUTS = WEEKDAYS.reduce((acc, d) => ({ ...acc, [d]: [] }), {});
+// Estrutura inicial — sem treinos
+const DEFAULT_WORKOUTS = { workouts: [] };
+// workouts = [{ id, name, exercises: [] }, ...]
 
 function loadWorkouts() {
   try {
     const s = storage.get(STORAGE_KEY);
     if (s) {
       const saved = JSON.parse(s);
-      Object.keys(saved).forEach(day => {
-        saved[day] = saved[day].map(ex =>
-          ex.restTime == null ? { ...ex, restTime: 90 } : ex
-        );
-      });
-      return saved;
+      // Support new format { workouts: [...] }
+      if (saved && Array.isArray(saved.workouts)) {
+        saved.workouts = saved.workouts.map(w => ({
+          ...w,
+          exercises: (w.exercises || []).map(ex =>
+            ex.restTime == null ? { ...ex, restTime: 90 } : ex
+          ),
+        }));
+        return saved;
+      }
     }
   } catch (_) {}
-  return { ...DEFAULT_WORKOUTS };
+  return { workouts: [] };
 }
 function loadHistory() {
   try { const s = storage.get(HISTORY_KEY); if (s) return JSON.parse(s); } catch (_) {}
@@ -293,7 +299,7 @@ function PickerModal({ onClose, onAdd }) {
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.75)", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-      <div style={{ background: "#111827", borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, margin: "0 auto", padding: "20px 20px 40px", maxHeight: "92vh", overflowY: "auto", paddingBottom: "env(safe-area-inset-bottom, 40px)" }}>
+      <div style={{ background: "#111827", borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, margin: "0 auto", padding: "20px 20px", paddingBottom: "max(40px, env(safe-area-inset-bottom))", maxHeight: "90vh", overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <span style={{ fontSize: 18, fontWeight: 700, color: "#f9fafb" }}>
             {mode === "custom" ? (customStep === "form" ? "Exercício personalizado" : customName) : (!group ? "Escolha o grupo" : !exName ? group : group)}
@@ -1066,8 +1072,8 @@ function ImportScreen({ onClose, onImport }) {
 // ── MAIN APP ──────────────────────────────────────────────────────────────
 export default function WorkoutTracker({ userId, userEmail }) {
   const [hydrated, setHydrated] = useState(false);
-  const [workouts, setWorkouts] = useState(loadWorkouts);
-  const [activeDay, setActiveDay] = useState(0);
+  const [data, setData] = useState(loadWorkouts); // { workouts: [{id, name, exercises}] }
+  const [activeIdx, setActiveIdx] = useState(0);
   const [showPicker, setShowPicker] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
   const tripleClickRef = useRef({ count: 0, timer: null });
@@ -1077,31 +1083,41 @@ export default function WorkoutTracker({ userId, userEmail }) {
   const [showImport, setShowImport] = useState(false);
   const [showReset, setShowReset] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showNewWorkout, setShowNewWorkout] = useState(false);
+  const [newWorkoutName, setNewWorkoutName] = useState('');
+  const [editingWorkoutId, setEditingWorkoutId] = useState(null);
+  const [editingWorkoutName, setEditingWorkoutName] = useState('');
+  const [longPressTimer, setLongPressTimer] = useState(null);
   const [history, setHistory] = useState(loadHistory);
   const saveTimeoutRef = useRef(null);
-  useEffect(() => { setShowMenu(false); }, [activeDay]);
+  useEffect(() => { setShowMenu(false); }, [activeIdx]);
 
-  // Carrega dados da nuvem ao montar. Dados da nuvem têm prioridade sobre local.
+  const workouts = data.workouts || [];
+  const activeWorkout = workouts[activeIdx] || null;
+  const exercises = activeWorkout?.exercises || [];
+
+  // Carrega dados da nuvem ao montar.
   useEffect(() => {
     async function hydrate() {
       try {
-        const [cloudWorkouts, cloudHistory] = await Promise.all([
+        const [cloudData, cloudHistory] = await Promise.all([
           loadWorkoutsFromCloud(userId),
           loadHistoryFromCloud(userId),
         ]);
-        if (cloudWorkouts) {
-          Object.keys(cloudWorkouts).forEach(day => {
-            cloudWorkouts[day] = cloudWorkouts[day].map(ex =>
+        if (cloudData && Array.isArray(cloudData.workouts)) {
+          cloudData.workouts = cloudData.workouts.map(w => ({
+            ...w,
+            exercises: (w.exercises || []).map(ex =>
               ex.restTime == null ? { ...ex, restTime: 90 } : ex
-            );
-          });
-          setWorkouts(cloudWorkouts);
+            ),
+          }));
+          setData(cloudData);
+          if (cloudData.workouts.length > 0) setActiveIdx(0);
         }
         if (cloudHistory) setHistory(cloudHistory);
       } catch (e) {
-        console.warn("Erro ao carregar da nuvem, usando dados locais:", e);
+        console.warn("Erro ao carregar da nuvem:", e);
       }
-      // Restaura sessão ativa se havia uma em andamento (app fechado durante treino)
       const savedTs = storage.get(SESSION_START_KEY);
       if (savedTs && Number(savedTs) > 0) {
         setSessionStartTs(Number(savedTs));
@@ -1117,16 +1133,14 @@ export default function WorkoutTracker({ userId, userEmail }) {
     const saved = storage.get(SESSION_START_KEY);
     return saved ? Number(saved) : null;
   });
-  // Salva na nuvem com debounce de 1.5s para não sobrecarregar a API
+  // Salva na nuvem com debounce
   useEffect(() => {
     if (!hydrated) return;
-    // Salva local imediatamente como backup
-    try { storage.set(STORAGE_KEY, JSON.stringify(workouts)); } catch (_) {}
-    // Debounce o save na nuvem
+    try { storage.set(STORAGE_KEY, JSON.stringify(data)); } catch (_) {}
     clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(async () => {
       try {
-        await saveWorkoutsToCloud(userId, workouts);
+        await saveWorkoutsToCloud(userId, data);
         setSavedFlash(true);
         setTimeout(() => setSavedFlash(false), 1200);
       } catch (e) {
@@ -1134,56 +1148,70 @@ export default function WorkoutTracker({ userId, userEmail }) {
       }
     }, 1500);
     return () => clearTimeout(saveTimeoutRef.current);
-  }, [workouts, hydrated, userId]);
+  }, [data, hydrated, userId]);
 
-  const dayKey = WEEKDAYS[activeDay];
-  const exercises = workouts[dayKey] || [];
   const doneCount = exercises.filter(e => e.done.length === e.sets).length;
-  const isRest = dayKey === "Sáb" || dayKey === "Dom";
   const volume = exercises.reduce((acc, ex) => acc + ex.done.reduce((s, setIdx) => {
     const w = ex.setWeights?.[setIdx] ?? ex.weight ?? 0;
     return s + Number(w) * ex.reps;
   }, 0), 0);
 
+  // Helper to update exercises of active workout
+  function updateExercises(updater) {
+    setData(prev => ({
+      ...prev,
+      workouts: prev.workouts.map((w, i) =>
+        i === activeIdx ? { ...w, exercises: updater(w.exercises || []) } : w
+      ),
+    }));
+  }
+
   function addExercise(ex) {
     const setWeights = Array.from({ length: ex.sets }, () => ex.weight ?? "");
-    setWorkouts(prev => ({ ...prev, [dayKey]: [...(prev[dayKey] || []), { ...ex, setWeights }] }));
+    updateExercises(prev => [...prev, { ...ex, setWeights }]);
   }
   function removeExercise(id) {
-    setWorkouts(prev => ({ ...prev, [dayKey]: prev[dayKey].filter(e => e.id !== id) }));
+    updateExercises(prev => prev.filter(e => e.id !== id));
   }
   function toggleSet(exId, setIdx) {
-    setWorkouts(prev => ({
-      ...prev,
-      [dayKey]: prev[dayKey].map(ex => {
-        if (ex.id !== exId) return ex;
-        const done = ex.done.includes(setIdx) ? ex.done.filter(s => s !== setIdx) : [...ex.done, setIdx];
-        return { ...ex, done };
-      }),
+    updateExercises(prev => prev.map(ex => {
+      if (ex.id !== exId) return ex;
+      const done = ex.done.includes(setIdx) ? ex.done.filter(s => s !== setIdx) : [...ex.done, setIdx];
+      return { ...ex, done };
     }));
   }
   function updateSetWeight(exId, setIdx, val) {
-    setWorkouts(prev => ({
-      ...prev,
-      [dayKey]: prev[dayKey].map(ex => {
-        if (ex.id !== exId) return ex;
-        const setWeights = [...(ex.setWeights || Array.from({ length: ex.sets }, () => ex.weight ?? ""))];
-        setWeights[setIdx] = val === "" ? "" : Number(val);
-        return { ...ex, setWeights };
-      }),
+    updateExercises(prev => prev.map(ex => {
+      if (ex.id !== exId) return ex;
+      const setWeights = [...(ex.setWeights || Array.from({ length: ex.sets }, () => ex.weight ?? ""))];
+      setWeights[setIdx] = val === "" ? "" : Number(val);
+      return { ...ex, setWeights };
     }));
   }
   function updateExercise(exId, changes) {
-    setWorkouts(prev => ({
+    updateExercises(prev => prev.map(ex => {
+      if (ex.id !== exId) return ex;
+      const newSets = changes.sets ?? ex.sets;
+      const setWeights = Array.from({ length: newSets }, (_, i) => ex.setWeights?.[i] ?? ex.weight ?? "");
+      const done = ex.done.filter(s => s < newSets);
+      return { ...ex, ...changes, setWeights, done };
+    }));
+  }
+  // Workout CRUD
+  function createWorkout(name) {
+    if (!name.trim() || workouts.length >= MAX_WORKOUTS) return;
+    const newW = { id: genId(), name: name.trim(), exercises: [] };
+    setData(prev => ({ ...prev, workouts: [...prev.workouts, newW] }));
+    setActiveIdx(workouts.length);
+  }
+  function deleteWorkout(idx) {
+    setData(prev => ({ ...prev, workouts: prev.workouts.filter((_, i) => i !== idx) }));
+    setActiveIdx(prev => Math.max(0, prev > idx ? prev - 1 : prev === idx ? 0 : prev));
+  }
+  function renameWorkout(idx, name) {
+    setData(prev => ({
       ...prev,
-      [dayKey]: prev[dayKey].map(ex => {
-        if (ex.id !== exId) return ex;
-        // If sets changed, resize setWeights and done arrays
-        const newSets = changes.sets ?? ex.sets;
-        const setWeights = Array.from({ length: newSets }, (_, i) => ex.setWeights?.[i] ?? ex.weight ?? "");
-        const done = ex.done.filter(s => s < newSets);
-        return { ...ex, ...changes, setWeights, done };
-      }),
+      workouts: prev.workouts.map((w, i) => i === idx ? { ...w, name: name.trim() } : w),
     }));
   }
   function startSession() {
@@ -1201,13 +1229,14 @@ export default function WorkoutTracker({ userId, userEmail }) {
     const now = new Date();
     const dateShort = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}`;
     const dateFull = now.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
-    const session = { day: dayKey, date: dateFull, dateShort, duration, volume, exercises: exercises.map(ex => ({ ...ex })) };
+    const workoutName = activeWorkout?.name || "Treino";
+    const session = { workoutName, date: dateFull, dateShort, duration, volume, exercises: exercises.map(ex => ({ ...ex })) };
     const newHistory = [...history, session];
     setHistory(newHistory);
     saveHistory(newHistory);
-    // Salva histórico na nuvem
     saveHistoryToCloud(userId, newHistory).catch(e => console.warn("Erro ao salvar histórico:", e));
-    setWorkouts(prev => ({ ...prev, [dayKey]: prev[dayKey].map(ex => ({ ...ex, done: [] })) }));
+    // Reset done in active workout
+    updateExercises(prev => prev.map(ex => ({ ...ex, done: [] })));
     setSessionActive(false);
     setShowFinishConfirm(false);
   }
@@ -1232,11 +1261,11 @@ export default function WorkoutTracker({ userId, userEmail }) {
   );
 
   if (showHistory) return <HistoryScreen onClose={() => setShowHistory(false)} onDelete={(updated) => { setHistory(updated); saveHistoryToCloud(userId, updated).catch(() => {}); }} />;
-  if (showImport) return <ImportScreen onClose={() => setShowImport(false)} onImport={(data) => { setWorkouts(data); setShowImport(false); }} />;
-  if (showReset) return <ResetScreen onClose={() => setShowReset(false)} onReset={(w, h) => { setWorkouts(w); setHistory(h); saveWorkoutsToCloud(userId, w).catch(()=>{}); saveHistoryToCloud(userId, h).catch(()=>{}); }} />;
+  if (showImport) return <ImportScreen onClose={() => setShowImport(false)} onImport={(imported) => { setData(imported); setActiveIdx(0); setShowImport(false); }} />;
   if (showReset) return <ResetScreen onClose={() => setShowReset(false)} onReset={() => {
-    const empty = WEEKDAYS.reduce((acc, d) => ({ ...acc, [d]: [] }), {});
-    setWorkouts(empty);
+    const empty = { workouts: [] };
+    setData(empty);
+    setActiveIdx(0);
     setHistory([]);
     saveHistory([]);
     saveWorkoutsToCloud(userId, empty).catch(() => {});
@@ -1282,10 +1311,6 @@ export default function WorkoutTracker({ userId, userEmail }) {
                     <span style={{ fontSize: 16 }}>🗑️</span> Zerar dados
                   </button>
                   <div style={{ height: 1, background: "#374151" }} />
-                  <button onClick={() => { setShowReset(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#ef4444", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
-                    <span style={{ fontSize: 16 }}>🗑️</span> Zerar dados
-                  </button>
-                  <div style={{ height: 1, background: "#374151" }} />
                   <button onClick={() => supabase.auth.signOut()} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#9ca3af", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
                     <span style={{ fontSize: 16 }}>→</span> Sair
                   </button>
@@ -1295,10 +1320,10 @@ export default function WorkoutTracker({ userId, userEmail }) {
           </div>
         </div>
 
-        {/* Day title + counter */}
+        {/* Workout title + counter */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 8 }}>
           <h1 style={{ margin: 0, fontSize: 36, fontWeight: 800, color: "#f9fafb", lineHeight: 1 }}>
-            {isRest ? "Descanso" : dayKey}
+            {activeWorkout ? activeWorkout.name : ""}
           </h1>
           {exercises.length > 0 && (
             <div style={{ textAlign: "right", paddingBottom: 2 }}>
@@ -1322,36 +1347,97 @@ export default function WorkoutTracker({ userId, userEmail }) {
         </div>
       </div>
 
-      {/* Day Selector */}
+      {/* Workout Tabs */}
       <div style={{ padding: "12px 20px 8px", overflowX: "auto" }}>
-        <div style={{ display: "flex", gap: 8, minWidth: "max-content" }}>
-          {WEEKDAYS.map((day, i) => {
-            const isActive = i === activeDay;
-            const hasEx = (workouts[day] || []).length > 0;
-            const dayDone = hasEx && (workouts[day] || []).every(e => e.done.length === e.sets);
+        <div style={{ display: "flex", gap: 8, minWidth: "max-content", alignItems: "center" }}>
+          {workouts.map((w, i) => {
+            const isActive = i === activeIdx;
+            const isDone = w.exercises.length > 0 && w.exercises.every(e => e.done.length === e.sets);
+            const isRenaming = editingWorkoutId === w.id;
             return (
-              <button key={day} onClick={() => { if (!sessionActive) { setActiveDay(i); setShowMenu(false); } }} style={{
-                position: "relative",
-                background: isActive ? "#a3e635" : hasEx ? "#1f2937" : "transparent",
-                border: isActive ? "none" : `1.5px solid ${hasEx ? "#374151" : "#1f2937"}`,
-                borderRadius: 10, padding: "8px 14px", cursor: sessionActive ? "default" : "pointer",
-                fontSize: 15, fontWeight: isActive ? 700 : 500,
-                color: isActive ? "#0a0a0a" : hasEx ? "#d1d5db" : "#374151",
-                opacity: sessionActive && !isActive ? 0.4 : 1,
-                transition: "all 0.15s",
-              }}>
-                {day}
-                {dayDone && !isActive && (
-                  <span style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: "50%", background: "#a3e635" }} />
+              <div key={w.id} style={{ position: "relative" }}>
+                {isRenaming ? (
+                  <input
+                    autoFocus
+                    value={editingWorkoutName}
+                    onChange={e => setEditingWorkoutName(e.target.value)}
+                    onBlur={() => { renameWorkout(i, editingWorkoutName || w.name); setEditingWorkoutId(null); }}
+                    onKeyDown={e => { if (e.key === "Enter") { renameWorkout(i, editingWorkoutName || w.name); setEditingWorkoutId(null); } if (e.key === "Escape") setEditingWorkoutId(null); }}
+                    style={{ background: "#1f2937", border: "1.5px solid #a3e635", borderRadius: 10, padding: "8px 12px", color: "#f9fafb", fontSize: 14, fontWeight: 700, outline: "none", width: Math.max(80, editingWorkoutName.length * 10) }}
+                  />
+                ) : (
+                  <button
+                    onClick={() => { if (!sessionActive) { setActiveIdx(i); setShowMenu(false); } }}
+                    onTouchStart={() => {
+                      if (sessionActive) return;
+                      const t = setTimeout(() => {
+                        setEditingWorkoutId(w.id + "_menu");
+                      }, 600);
+                      setLongPressTimer(t);
+                    }}
+                    onTouchEnd={() => { clearTimeout(longPressTimer); }}
+                    onTouchMove={() => { clearTimeout(longPressTimer); }}
+                    style={{
+                      position: "relative",
+                      background: isActive ? "#a3e635" : "#1f2937",
+                      border: isActive ? "none" : "1.5px solid #374151",
+                      borderRadius: 10, padding: "8px 14px",
+                      cursor: sessionActive ? "default" : "pointer",
+                      fontSize: 14, fontWeight: isActive ? 700 : 500,
+                      color: isActive ? "#0a0a0a" : "#d1d5db",
+                      opacity: sessionActive && !isActive ? 0.4 : 1,
+                      transition: "all 0.15s", userSelect: "none",
+                    }}
+                  >
+                    {w.name}
+                    {isDone && !isActive && <span style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: "50%", background: "#a3e635" }} />}
+                  </button>
                 )}
-                {hasEx && !isActive && !dayDone && (
-                  <span style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: "50%", background: "#374151" }} />
+                {/* Long press context menu */}
+                {editingWorkoutId === w.id + "_menu" && (
+                  <>
+                    <div onClick={() => setEditingWorkoutId(null)} style={{ position: "fixed", inset: 0, zIndex: 10 }} />
+                    <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 20, background: "#1f2937", borderRadius: 12, border: "1px solid #374151", overflow: "hidden", boxShadow: "0 8px 24px rgba(0,0,0,0.5)", minWidth: 160 }}>
+                      <button onClick={() => { setEditingWorkoutId(w.id); setEditingWorkoutName(w.name); }} style={{ width: "100%", background: "none", border: "none", padding: "13px 16px", cursor: "pointer", color: "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, textAlign: "left" }}>✏️ Renomear</button>
+                      <div style={{ height: 1, background: "#374151" }} />
+                      <button onClick={() => { deleteWorkout(i); setEditingWorkoutId(null); }} style={{ width: "100%", background: "none", border: "none", padding: "13px 16px", cursor: "pointer", color: "#ef4444", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, textAlign: "left" }}>🗑️ Excluir</button>
+                    </div>
+                  </>
                 )}
-              </button>
+              </div>
             );
           })}
+          {/* Add workout button */}
+          {workouts.length < MAX_WORKOUTS && !sessionActive && (
+            <button
+              onClick={() => setShowNewWorkout(true)}
+              style={{ background: "#1f2937", border: "1.5px dashed #374151", borderRadius: 10, width: 38, height: 38, cursor: "pointer", color: "#6b7280", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+            >
+              +
+            </button>
+          )}
         </div>
       </div>
+      {/* New workout modal */}
+      {showNewWorkout && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ background: "#111827", borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "24px 20px 40px" }}>
+            <p style={{ margin: "0 0 16px", fontSize: 17, fontWeight: 700, color: "#f9fafb" }}>Novo treino</p>
+            <input
+              autoFocus
+              value={newWorkoutName}
+              onChange={e => setNewWorkoutName(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" && newWorkoutName.trim()) { createWorkout(newWorkoutName); setNewWorkoutName(""); setShowNewWorkout(false); } }}
+              placeholder="Ex: Treino A, Peito e Costas..."
+              style={{ width: "100%", background: "#1f2937", border: "1.5px solid #374151", borderRadius: 12, padding: "14px 16px", color: "#f9fafb", fontSize: 16, outline: "none", boxSizing: "border-box", marginBottom: 12 }}
+            />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => { setShowNewWorkout(false); setNewWorkoutName(""); }} style={{ flex: 1, background: "#1f2937", border: "none", borderRadius: 12, padding: "14px 0", cursor: "pointer", color: "#9ca3af", fontSize: 14, fontWeight: 700 }}>Cancelar</button>
+              <button onClick={() => { if (newWorkoutName.trim()) { createWorkout(newWorkoutName); setNewWorkoutName(""); setShowNewWorkout(false); } }} style={{ flex: 2, background: newWorkoutName.trim() ? "#a3e635" : "#1f2937", border: "none", borderRadius: 12, padding: "14px 0", cursor: "pointer", color: newWorkoutName.trim() ? "#0a0a0a" : "#4b5563", fontSize: 15, fontWeight: 800 }}>Criar treino</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Progress Bar */}
       {exercises.length > 0 && (
@@ -1362,7 +1448,16 @@ export default function WorkoutTracker({ userId, userEmail }) {
 
       {/* Exercise List */}
       <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 12 }}>
-        {exercises.length === 0 ? (
+        {workouts.length === 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "80px 20px" }}>
+            <div style={{ fontSize: 56 }}>🏋️</div>
+            <p style={{ fontSize: 18, fontWeight: 700, color: "#f9fafb", margin: "16px 0 8px", textAlign: "center" }}>Nenhum treino ainda</p>
+            <p style={{ fontSize: 14, color: "#4b5563", margin: "0 0 28px", textAlign: "center" }}>Crie seu primeiro treino para começar</p>
+            <button onClick={() => setShowNewWorkout(true)} style={{ background: "#a3e635", border: "none", borderRadius: 14, padding: "16px 32px", cursor: "pointer", color: "#0a0a0a", fontSize: 16, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
+              + Criar primeiro treino
+            </button>
+          </div>
+        ) : exercises.length === 0 ? (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "60px 0" }}>
             <div style={{ fontSize: 48 }}>🏋️</div>
             <p style={{ fontSize: 14, textAlign: "center", margin: "12px 0 0", color: "#4b5563", lineHeight: 1.6 }}>
@@ -1396,7 +1491,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
           </div>
         )}
 
-        {!isRest && exercises.length > 0 && (
+        {workouts.length > 0 && exercises.length > 0 && (
           sessionActive ? (
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={() => setShowPicker(true)} style={{ flex: 1, background: "#1f2937", border: "1.5px solid #374151", borderRadius: 14, padding: "14px 0", cursor: "pointer", color: "#9ca3af", fontSize: 14, fontWeight: 700 }}>
@@ -1418,7 +1513,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
           )
         )}
 
-        {(isRest || exercises.length === 0) && (
+        {workouts.length > 0 && exercises.length === 0 && (
           <button onClick={() => setShowPicker(true)} style={{ width: "100%", background: "#a3e635", border: "none", borderRadius: 14, padding: "16px 0", cursor: "pointer", color: "#0a0a0a", fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
             <span style={{ fontSize: 18 }}>+</span> Exercício
           </button>
