@@ -27,6 +27,28 @@ self.addEventListener("message", e => {
       })
     );
   }
+
+  // Notificação agendada com delay — funciona com tela bloqueada
+  // porque o setTimeout roda dentro do SW, não na página React
+  if (e.data?.type === "PUSH_DELAYED") {
+    const { title, body, fireAt } = e.data;
+    const delay = Math.max(0, fireAt - Date.now());
+    e.waitUntil(
+      new Promise(resolve => {
+        setTimeout(() => {
+          self.registration.showNotification(title, {
+            body,
+            icon: "/favicon.svg",
+            badge: "/favicon.svg",
+            vibrate: [200, 100, 200],
+            silent: false,
+            requireInteraction: false,
+            tag: "trainefy-rest",
+          }).then(resolve).catch(resolve);
+        }, delay);
+      })
+    );
+  }
 });
 
 // Toque na notificação → abre/foca o app
