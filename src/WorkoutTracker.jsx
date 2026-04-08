@@ -1275,161 +1275,195 @@ export default function WorkoutTracker({ userId, userEmail }) {
   return (
     <div style={{ height: "100dvh", background: "#0a0f1a", fontFamily: "system-ui, -apple-system, sans-serif", display: "flex", flexDirection: "column", maxWidth: 480, margin: "0 auto", overflow: "hidden" }}>
 
-      {/* ── FIXED TOP SECTION ── */}
+      {/* ── FIXED TOP ── */}
       <div style={{ flexShrink: 0, background: "#0a0f1a" }}>
 
-      {/* Header */}
-      <div style={{ padding: "16px 20px 0" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          {/* Logo */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span onClick={handleLogoClick} style={{ fontSize: 22, fontWeight: 900, color: "#a3e635", letterSpacing: "3px", cursor: "default", userSelect: "none", lineHeight: 1 }}>TRAINEFY</span>
-              <span style={{ fontSize: 10, color: "#a3e635", opacity: savedFlash ? 1 : 0, transition: "opacity 0.3s", fontWeight: 600 }}>✓ salvo</span>
+        {/* Header */}
+        <div style={{ padding: "16px 20px 0" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span onClick={handleLogoClick} style={{ fontSize: 22, fontWeight: 900, color: "#a3e635", letterSpacing: "3px", cursor: "default", userSelect: "none", lineHeight: 1 }}>TRAINEFY</span>
+                <span style={{ fontSize: 10, color: "#a3e635", opacity: savedFlash ? 1 : 0, transition: "opacity 0.3s", fontWeight: 600 }}>✓ salvo</span>
+              </div>
+              <span style={{ fontSize: 11, color: "#4b5563", fontWeight: 400 }}>{userEmail}</span>
             </div>
-            <span style={{ fontSize: 11, color: "#4b5563", fontWeight: 400 }}>{userEmail}</span>
+            <div style={{ position: "relative" }}>
+              <button onClick={() => setShowMenu(v => !v)} style={{ background: showMenu ? "#374151" : "#1f2937", border: "1px solid #374151", borderRadius: 10, width: 44, height: 44, cursor: "pointer", color: "#9ca3af", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.15s" }}>
+                ⋯
+              </button>
+              {showMenu && (
+                <>
+                  <div onClick={() => setShowMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 10, WebkitTapHighlightColor: "transparent" }} />
+                  <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 20, background: "#1f2937", borderRadius: 14, border: "1px solid #374151", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", minWidth: 180 }}>
+                    <button onClick={() => { setShowHistory(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+                      <span style={{ fontSize: 16 }}>📊</span> Histórico
+                    </button>
+                    <div style={{ height: 1, background: "#374151" }} />
+                    <button onClick={() => { setShowImport(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+                      <span style={{ fontSize: 16 }}>📥</span> Importar treino
+                    </button>
+                    <div style={{ height: 1, background: "#374151" }} />
+                    <button onClick={() => { setShowReset(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#ef4444", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+                      <span style={{ fontSize: 16 }}>🗑️</span> Zerar dados
+                    </button>
+                    <div style={{ height: 1, background: "#374151" }} />
+                    <button onClick={() => supabase.auth.signOut()} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#9ca3af", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+                      <span style={{ fontSize: 16 }}>→</span> Sair
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
-          {/* Menu ⋯ */}
-          <div style={{ position: "relative" }}>
-            <button
-              onClick={() => setShowMenu(v => !v)}
-              style={{ background: showMenu ? "#374151" : "#1f2937", border: "1px solid #374151", borderRadius: 10, width: 44, height: 44, cursor: "pointer", color: "#9ca3af", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.15s" }}
-            >
-              ⋯
-            </button>
-            {showMenu && (
-              <>
-                <div onClick={() => setShowMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 10, WebkitTapHighlightColor: "transparent" }} />
-                <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 20, background: "#1f2937", borderRadius: 14, border: "1px solid #374151", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", minWidth: 180 }}>
-                  <button onClick={() => { setShowHistory(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
-                    <span style={{ fontSize: 16 }}>📊</span> Histórico
-                  </button>
-                  <div style={{ height: 1, background: "#374151" }} />
-                  <button onClick={() => { setShowImport(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
-                    <span style={{ fontSize: 16 }}>📥</span> Importar treino
-                  </button>
-                  <div style={{ height: 1, background: "#374151" }} />
-                  <button onClick={() => { setShowReset(true); setShowMenu(false); }} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#ef4444", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
-                    <span style={{ fontSize: 16 }}>🗑️</span> Zerar dados
-                  </button>
-                  <div style={{ height: 1, background: "#374151" }} />
-                  <button onClick={() => supabase.auth.signOut()} style={{ width: "100%", background: "none", border: "none", padding: "14px 18px", cursor: "pointer", color: "#9ca3af", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
-                    <span style={{ fontSize: 16 }}>→</span> Sair
-                  </button>
-                </div>
-              </>
+          {/* Title + counter */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 6 }}>
+            <h1 style={{ margin: 0, fontSize: 36, fontWeight: 800, color: "#f9fafb", lineHeight: 1 }}>
+              {activeWorkout ? activeWorkout.name : ""}
+            </h1>
+            {exercises.length > 0 && (
+              <div style={{ textAlign: "right", paddingBottom: 2 }}>
+                <div style={{ fontSize: 20, fontWeight: 700, color: "#a3e635" }}>{doneCount}/{exercises.length}</div>
+                <div style={{ fontSize: 10, color: "#4b5563" }}>exercícios</div>
+              </div>
+            )}
+          </div>
+
+          {/* Stats row */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+            {volume > 0
+              ? <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>Volume: <strong style={{ color: "#a3e635" }}>{Math.round(volume)}kg</strong></p>
+              : <span />}
+            {sessionActive && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#a3e63522", borderRadius: 20, padding: "4px 12px" }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#a3e635", animation: "pulse 1.5s infinite" }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#a3e635" }}>em treino</span>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Workout title + counter */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 8 }}>
-          <h1 style={{ margin: 0, fontSize: 36, fontWeight: 800, color: "#f9fafb", lineHeight: 1 }}>
-            {activeWorkout ? activeWorkout.name : ""}
-          </h1>
-          {exercises.length > 0 && (
-            <div style={{ textAlign: "right", paddingBottom: 2 }}>
-              <div style={{ fontSize: 20, fontWeight: 700, color: "#a3e635" }}>{doneCount}/{exercises.length}</div>
-              <div style={{ fontSize: 10, color: "#4b5563" }}>exercícios</div>
-            </div>
-          )}
+        {/* Workout Tabs */}
+        <div style={{ padding: "8px 20px 6px", overflowX: "auto" }}>
+          <div style={{ display: "flex", gap: 8, minWidth: "max-content", alignItems: "center" }}>
+            {workouts.map((w, i) => {
+              const isActive = i === activeIdx;
+              const isDone = w.exercises.length > 0 && w.exercises.every(e => e.done.length === e.sets);
+              const isRenaming = editingWorkoutId === w.id;
+              return (
+                <div key={w.id} style={{ position: "relative" }}>
+                  {isRenaming ? (
+                    <input autoFocus value={editingWorkoutName}
+                      onChange={e => setEditingWorkoutName(e.target.value)}
+                      onBlur={() => { renameWorkout(i, editingWorkoutName || w.name); setEditingWorkoutId(null); }}
+                      onKeyDown={e => { if (e.key === "Enter") { renameWorkout(i, editingWorkoutName || w.name); setEditingWorkoutId(null); } if (e.key === "Escape") setEditingWorkoutId(null); }}
+                      style={{ background: "#1f2937", border: "1.5px solid #a3e635", borderRadius: 10, padding: "8px 12px", color: "#f9fafb", fontSize: 14, fontWeight: 700, outline: "none", width: Math.max(80, editingWorkoutName.length * 10) }}
+                    />
+                  ) : (
+                    <button
+                      onClick={() => { if (!sessionActive) { setActiveIdx(i); setShowMenu(false); } }}
+                      onTouchStart={() => {
+                        if (sessionActive) return;
+                        const t = setTimeout(() => { setEditingWorkoutId(w.id + "_menu"); }, 600);
+                        setLongPressTimer(t);
+                      }}
+                      onTouchEnd={() => { clearTimeout(longPressTimer); }}
+                      onTouchMove={() => { clearTimeout(longPressTimer); }}
+                      style={{ position: "relative", background: isActive ? "#a3e635" : "#1f2937", border: isActive ? "none" : "1.5px solid #374151", borderRadius: 10, padding: "8px 14px", cursor: sessionActive ? "default" : "pointer", fontSize: 14, fontWeight: isActive ? 700 : 500, color: isActive ? "#0a0a0a" : "#d1d5db", opacity: sessionActive && !isActive ? 0.4 : 1, transition: "all 0.15s", userSelect: "none" }}
+                    >
+                      {w.name}
+                      {isDone && !isActive && <span style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: "50%", background: "#a3e635" }} />}
+                    </button>
+                  )}
+                  {editingWorkoutId === w.id + "_menu" && (
+                    <>
+                      <div onClick={() => setEditingWorkoutId(null)} style={{ position: "fixed", inset: 0, zIndex: 10 }} />
+                      <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 20, background: "#1f2937", borderRadius: 12, border: "1px solid #374151", overflow: "hidden", boxShadow: "0 8px 24px rgba(0,0,0,0.5)", minWidth: 160 }}>
+                        <button onClick={() => { setEditingWorkoutId(w.id); setEditingWorkoutName(w.name); }} style={{ width: "100%", background: "none", border: "none", padding: "13px 16px", cursor: "pointer", color: "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, textAlign: "left" }}>✏️ Renomear</button>
+                        <div style={{ height: 1, background: "#374151" }} />
+                        <button onClick={() => { deleteWorkout(i); setEditingWorkoutId(null); }} style={{ width: "100%", background: "none", border: "none", padding: "13px 16px", cursor: "pointer", color: "#ef4444", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, textAlign: "left" }}>🗑️ Excluir</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+            {workouts.length < MAX_WORKOUTS && !sessionActive && (
+              <button onClick={() => setShowNewWorkout(true)} style={{ background: "#1f2937", border: "1.5px dashed #374151", borderRadius: 10, width: 38, height: 38, cursor: "pointer", color: "#6b7280", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>+</button>
+            )}
+          </div>
         </div>
 
-        {/* Stats row */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-          {volume > 0
-            ? <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>Volume: <strong style={{ color: "#a3e635" }}>{Math.round(volume)}kg</strong></p>
-            : <span />}
-          {sessionActive && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#a3e63522", borderRadius: 20, padding: "4px 12px" }}>
-              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#a3e635", animation: "pulse 1.5s infinite" }} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#a3e635" }}>em treino</span>
-            </div>
-          )}
-        </div>
+        {/* Progress Bar */}
+        {exercises.length > 0 && (
+          <div style={{ margin: "4px 20px 8px", height: 3, background: "#1f2937", borderRadius: 2 }}>
+            <div style={{ height: "100%", borderRadius: 2, background: "#a3e635", width: `${(doneCount / exercises.length) * 100}%`, transition: "width 0.4s ease" }} />
+          </div>
+        )}
       </div>
 
-      {/* Workout Tabs */}
-      <div style={{ padding: "12px 20px 8px", overflowX: "auto" }}>
-        <div style={{ display: "flex", gap: 8, minWidth: "max-content", alignItems: "center" }}>
-          {workouts.map((w, i) => {
-            const isActive = i === activeIdx;
-            const isDone = w.exercises.length > 0 && w.exercises.every(e => e.done.length === e.sets);
-            const isRenaming = editingWorkoutId === w.id;
-            return (
-              <div key={w.id} style={{ position: "relative" }}>
-                {isRenaming ? (
-                  <input
-                    autoFocus
-                    value={editingWorkoutName}
-                    onChange={e => setEditingWorkoutName(e.target.value)}
-                    onBlur={() => { renameWorkout(i, editingWorkoutName || w.name); setEditingWorkoutId(null); }}
-                    onKeyDown={e => { if (e.key === "Enter") { renameWorkout(i, editingWorkoutName || w.name); setEditingWorkoutId(null); } if (e.key === "Escape") setEditingWorkoutId(null); }}
-                    style={{ background: "#1f2937", border: "1.5px solid #a3e635", borderRadius: 10, padding: "8px 12px", color: "#f9fafb", fontSize: 14, fontWeight: 700, outline: "none", width: Math.max(80, editingWorkoutName.length * 10) }}
-                  />
-                ) : (
-                  <button
-                    onClick={() => { if (!sessionActive) { setActiveIdx(i); setShowMenu(false); } }}
-                    onTouchStart={() => {
-                      if (sessionActive) return;
-                      const t = setTimeout(() => {
-                        setEditingWorkoutId(w.id + "_menu");
-                      }, 600);
-                      setLongPressTimer(t);
-                    }}
-                    onTouchEnd={() => { clearTimeout(longPressTimer); }}
-                    onTouchMove={() => { clearTimeout(longPressTimer); }}
-                    style={{
-                      position: "relative",
-                      background: isActive ? "#a3e635" : "#1f2937",
-                      border: isActive ? "none" : "1.5px solid #374151",
-                      borderRadius: 10, padding: "8px 14px",
-                      cursor: sessionActive ? "default" : "pointer",
-                      fontSize: 14, fontWeight: isActive ? 700 : 500,
-                      color: isActive ? "#0a0a0a" : "#d1d5db",
-                      opacity: sessionActive && !isActive ? 0.4 : 1,
-                      transition: "all 0.15s", userSelect: "none",
-                    }}
-                  >
-                    {w.name}
-                    {isDone && !isActive && <span style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: "50%", background: "#a3e635" }} />}
-                  </button>
-                )}
-                {/* Long press context menu */}
-                {editingWorkoutId === w.id + "_menu" && (
-                  <>
-                    <div onClick={() => setEditingWorkoutId(null)} style={{ position: "fixed", inset: 0, zIndex: 10 }} />
-                    <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 20, background: "#1f2937", borderRadius: 12, border: "1px solid #374151", overflow: "hidden", boxShadow: "0 8px 24px rgba(0,0,0,0.5)", minWidth: 160 }}>
-                      <button onClick={() => { setEditingWorkoutId(w.id); setEditingWorkoutName(w.name); }} style={{ width: "100%", background: "none", border: "none", padding: "13px 16px", cursor: "pointer", color: "#f9fafb", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, textAlign: "left" }}>✏️ Renomear</button>
-                      <div style={{ height: 1, background: "#374151" }} />
-                      <button onClick={() => { deleteWorkout(i); setEditingWorkoutId(null); }} style={{ width: "100%", background: "none", border: "none", padding: "13px 16px", cursor: "pointer", color: "#ef4444", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, textAlign: "left" }}>🗑️ Excluir</button>
-                    </div>
-                  </>
-                )}
-              </div>
-            );
-          })}
-          {/* Add workout button */}
-          {workouts.length < MAX_WORKOUTS && !sessionActive && (
-            <button
-              onClick={() => setShowNewWorkout(true)}
-              style={{ background: "#1f2937", border: "1.5px dashed #374151", borderRadius: 10, width: 38, height: 38, cursor: "pointer", color: "#6b7280", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
-            >
-              +
+      {/* ── SCROLLABLE LIST ── */}
+      <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "8px 20px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
+        {workouts.length === 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", padding: "20px" }}>
+            <div style={{ fontSize: 56 }}>🏋️</div>
+            <p style={{ fontSize: 18, fontWeight: 700, color: "#f9fafb", margin: "16px 0 8px", textAlign: "center" }}>Nenhum treino ainda</p>
+            <p style={{ fontSize: 14, color: "#4b5563", margin: "0 0 28px", textAlign: "center" }}>Crie seu primeiro treino para começar</p>
+            <button onClick={() => setShowNewWorkout(true)} style={{ background: "#a3e635", border: "none", borderRadius: 14, padding: "16px 32px", cursor: "pointer", color: "#0a0a0a", fontSize: 16, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
+              + Criar primeiro treino
             </button>
-          )}
-        </div>
+          </div>
+        ) : exercises.length === 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", padding: "20px" }}>
+            <div style={{ fontSize: 48 }}>🏋️</div>
+            <p style={{ fontSize: 14, textAlign: "center", margin: "12px 0 0", color: "#4b5563", lineHeight: 1.6 }}>
+              Nenhum exercício ainda.<br />Toca em <strong style={{ color: "#a3e635" }}>+ Exercício</strong> para começar.
+            </p>
+          </div>
+        ) : exercises.map(ex => (
+          <ExerciseCard key={ex.id} exercise={ex} onRemove={removeExercise} onToggleSet={toggleSet} onUpdateSetWeight={updateSetWeight} onUpdateExercise={updateExercise} sessionActive={sessionActive} />
+        ))}
       </div>
+
+      {/* ── FIXED BOTTOM BAR ── */}
+      <div style={{ flexShrink: 0, padding: "10px 20px", paddingBottom: "max(14px, env(safe-area-inset-bottom))", background: "#0a0f1a", borderTop: "1px solid #1a2234" }}>
+        {showFinishConfirm && (
+          <div style={{ background: "#1f2937", borderRadius: 14, padding: "14px 16px", border: "1px solid #374151", marginBottom: 10 }}>
+            <p style={{ margin: "0 0 4px", fontSize: 14, color: "#f9fafb", fontWeight: 700 }}>Finalizar treino?</p>
+            <p style={{ margin: "0 0 12px", fontSize: 12, color: "#6b7280" }}>As séries marcadas serão salvas no histórico.</p>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setShowFinishConfirm(false)} style={{ flex: 1, background: "#374151", border: "none", borderRadius: 10, padding: "10px 0", cursor: "pointer", color: "#9ca3af", fontSize: 13, fontWeight: 600 }}>Cancelar</button>
+              <button onClick={finishSession} style={{ flex: 2, background: "#a3e635", border: "none", borderRadius: 10, padding: "10px 0", cursor: "pointer", color: "#0a0a0a", fontSize: 13, fontWeight: 800 }}>✓ Finalizar</button>
+            </div>
+          </div>
+        )}
+        {workouts.length > 0 && exercises.length > 0 && (
+          sessionActive ? (
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setShowPicker(true)} style={{ flex: 1, background: "#1f2937", border: "1.5px solid #374151", borderRadius: 14, padding: "14px 0", cursor: "pointer", color: "#9ca3af", fontSize: 14, fontWeight: 700 }}>+ Exercício</button>
+              <button onClick={() => setShowFinishConfirm(true)} style={{ flex: 2, background: "#a3e635", border: "none", borderRadius: 14, padding: "14px 0", cursor: "pointer", color: "#0a0a0a", fontSize: 14, fontWeight: 800 }}>🏁 Finalizar</button>
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setShowPicker(true)} style={{ flex: 1, background: "#1f2937", border: "1.5px solid #374151", borderRadius: 14, padding: "14px 0", cursor: "pointer", color: "#9ca3af", fontSize: 14, fontWeight: 700 }}>+ Exercício</button>
+              <button onClick={startSession} style={{ flex: 2, background: "#a3e635", border: "none", borderRadius: 14, padding: "14px 0", cursor: "pointer", color: "#0a0a0a", fontSize: 15, fontWeight: 800 }}>▶ Iniciar treino</button>
+            </div>
+          )
+        )}
+        {workouts.length > 0 && exercises.length === 0 && (
+          <button onClick={() => setShowPicker(true)} style={{ width: "100%", background: "#a3e635", border: "none", borderRadius: 14, padding: "16px 0", cursor: "pointer", color: "#0a0a0a", fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <span style={{ fontSize: 18 }}>+</span> Exercício
+          </button>
+        )}
+      </div>
+
       {/* New workout modal */}
       {showNewWorkout && (
         <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-          <div style={{ background: "#111827", borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "24px 20px 40px" }}>
+          <div style={{ background: "#111827", borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "24px 20px", paddingBottom: "max(40px, env(safe-area-inset-bottom))" }}>
             <p style={{ margin: "0 0 16px", fontSize: 17, fontWeight: 700, color: "#f9fafb" }}>Novo treino</p>
-            <input
-              autoFocus
-              value={newWorkoutName}
-              onChange={e => setNewWorkoutName(e.target.value)}
+            <input autoFocus value={newWorkoutName} onChange={e => setNewWorkoutName(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter" && newWorkoutName.trim()) { createWorkout(newWorkoutName); setNewWorkoutName(""); setShowNewWorkout(false); } }}
               placeholder="Ex: Treino A, Peito e Costas..."
               style={{ width: "100%", background: "#1f2937", border: "1.5px solid #374151", borderRadius: 12, padding: "14px 16px", color: "#f9fafb", fontSize: 16, outline: "none", boxSizing: "border-box", marginBottom: 12 }}
@@ -1441,89 +1475,6 @@ export default function WorkoutTracker({ userId, userEmail }) {
           </div>
         </div>
       )}
-
-      {/* Progress Bar */}
-      {exercises.length > 0 && (
-        <div style={{ margin: "0 20px 8px", height: 3, background: "#1f2937", borderRadius: 2 }}>
-          <div style={{ height: "100%", borderRadius: 2, background: "#a3e635", width: `${(doneCount / exercises.length) * 100}%`, transition: "width 0.4s ease" }} />
-        </div>
-      )}
-
-      </div>{/* end fixed top */}
-
-      {/* ── SCROLLABLE EXERCISE LIST ── */}
-      <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "0 20px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
-        {workouts.length === 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "80px 20px" }}>
-            <div style={{ fontSize: 56 }}>🏋️</div>
-            <p style={{ fontSize: 18, fontWeight: 700, color: "#f9fafb", margin: "16px 0 8px", textAlign: "center" }}>Nenhum treino ainda</p>
-            <p style={{ fontSize: 14, color: "#4b5563", margin: "0 0 28px", textAlign: "center" }}>Crie seu primeiro treino para começar</p>
-            <button onClick={() => setShowNewWorkout(true)} style={{ background: "#a3e635", border: "none", borderRadius: 14, padding: "16px 32px", cursor: "pointer", color: "#0a0a0a", fontSize: 16, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
-              + Criar primeiro treino
-            </button>
-          </div>
-        ) : exercises.length === 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "60px 0" }}>
-            <div style={{ fontSize: 48 }}>🏋️</div>
-            <p style={{ fontSize: 14, textAlign: "center", margin: "12px 0 0", color: "#4b5563", lineHeight: 1.6 }}>
-              Nenhum exercício ainda.<br />Toca em <strong style={{ color: "#a3e635" }}>+ Exercício</strong> para começar.
-            </p>
-          </div>
-        ) : exercises.map(ex => (
-          <ExerciseCard
-            key={ex.id}
-            exercise={ex}
-            onRemove={removeExercise}
-            onToggleSet={toggleSet}
-            onUpdateSetWeight={updateSetWeight}
-            onUpdateExercise={updateExercise}
-            sessionActive={sessionActive}
-          />
-        ))}
-      </div>{/* end scrollable */}
-
-      {/* ── FIXED BOTTOM BAR ── */}
-      <div style={{ flexShrink: 0, padding: "12px 20px", paddingBottom: "max(16px, env(safe-area-inset-bottom))", background: "#0a0f1a", borderTop: "1px solid #1f2937" }}>
-
-        {showFinishConfirm && (
-          <div style={{ background: "#1f2937", borderRadius: 14, padding: "14px 16px", border: "1px solid #374151", marginBottom: 12 }}>
-            <p style={{ margin: "0 0 4px", fontSize: 14, color: "#f9fafb", fontWeight: 700 }}>Finalizar treino?</p>
-            <p style={{ margin: "0 0 12px", fontSize: 12, color: "#6b7280" }}>As séries marcadas serão salvas no histórico.</p>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setShowFinishConfirm(false)} style={{ flex: 1, background: "#374151", border: "none", borderRadius: 10, padding: "10px 0", cursor: "pointer", color: "#9ca3af", fontSize: 13, fontWeight: 600 }}>Cancelar</button>
-              <button onClick={finishSession} style={{ flex: 2, background: "#a3e635", border: "none", borderRadius: 10, padding: "10px 0", cursor: "pointer", color: "#0a0a0a", fontSize: 13, fontWeight: 800 }}>✓ Finalizar</button>
-            </div>
-          </div>
-        )}
-
-        {workouts.length > 0 && exercises.length > 0 && (
-          sessionActive ? (
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setShowPicker(true)} style={{ flex: 1, background: "#1f2937", border: "1.5px solid #374151", borderRadius: 14, padding: "14px 0", cursor: "pointer", color: "#9ca3af", fontSize: 14, fontWeight: 700 }}>
-                + Exercício
-              </button>
-              <button onClick={() => setShowFinishConfirm(true)} style={{ flex: 2, background: "#a3e635", border: "none", borderRadius: 14, padding: "14px 0", cursor: "pointer", color: "#0a0a0a", fontSize: 14, fontWeight: 800 }}>
-                🏁 Finalizar
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setShowPicker(true)} style={{ flex: 1, background: "#1f2937", border: "1.5px solid #374151", borderRadius: 14, padding: "14px 0", cursor: "pointer", color: "#9ca3af", fontSize: 14, fontWeight: 700 }}>
-                + Exercício
-              </button>
-              <button onClick={startSession} style={{ flex: 2, background: "#a3e635", border: "none", borderRadius: 14, padding: "14px 0", cursor: "pointer", color: "#0a0a0a", fontSize: 15, fontWeight: 800 }}>
-                ▶ Iniciar treino
-              </button>
-            </div>
-          )
-        )}
-
-        {workouts.length > 0 && exercises.length === 0 && (
-          <button onClick={() => setShowPicker(true)} style={{ width: "100%", background: "#a3e635", border: "none", borderRadius: 14, padding: "16px 0", cursor: "pointer", color: "#0a0a0a", fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-            <span style={{ fontSize: 18 }}>+</span> Exercício
-          </button>
-        )}
-      </div>
 
       <style>{`
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
@@ -1537,3 +1488,4 @@ export default function WorkoutTracker({ userId, userEmail }) {
     </div>
   );
 }
+
