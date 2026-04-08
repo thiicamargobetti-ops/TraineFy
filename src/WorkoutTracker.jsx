@@ -1373,7 +1373,7 @@ function HiitScreen({ onClose }) {
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={() => setWorkTime(v => Math.max(5, v - 5))} style={{ width: 40, height: 40, borderRadius: 10, background: "#1f2937", border: "none", color: "#f9fafb", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
-                <button onClick={() => setWorkTime(v => v + 5)} style={{ width: 40, height: 40, borderRadius: 10, background: "#1f2937", border: "none", color: "#f9fafb", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent:: "center" }}>+</button>
+                <button onClick={() => setWorkTime(v => v + 5)} style={{ width: 40, height: 40, borderRadius: 10, background: "#1f2937", border: "none", color: "#f9fafb", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
               </div>
             </div>
             <div style={{ display: "flex", gap: 6 }}>
