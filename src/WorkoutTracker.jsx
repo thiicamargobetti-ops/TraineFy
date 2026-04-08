@@ -393,31 +393,6 @@ function PickerModal({ onClose, onAdd }) {
 }
 
 
-// ── PUSH NOTIFICATION HELPER (global) ────────────────────────────────────
-// Sempre usa o Service Worker — único método que funciona com tela bloqueada.
-// new Notification() direto não funciona em background/tela bloqueada.
-function sendPushNotification(title, body) {
-  if (!("Notification" in window) || Notification.permission !== "granted") return;
-  try {
-    if (navigator.serviceWorker?.controller) {
-      // SW ativo: postMessage → SW chama showNotification()
-      navigator.serviceWorker.controller.postMessage({ type: "PUSH", title, body });
-    } else {
-      // SW registrado mas ainda sem controller (primeiro load) — usa registration
-      navigator.serviceWorker.ready.then(reg => {
-        reg.showNotification(title, {
-          body,
-          icon: "/favicon.svg",
-          badge: "/favicon.svg",
-          vibrate: [200, 100, 200],
-          silent: false,
-          requireInteraction: false,
-          tag: "trainefy",
-        });
-      }).catch(() => {});
-    }
-  } catch (_) {}
-}
 
 // ── REST BAR — wall-clock based, survives background/reopen ─────────────
 // startedAt is a Date.now() timestamp saved at the moment the set was checked.
@@ -703,10 +678,7 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
                   duration={exercise.restTime}
                   startedAt={restingSet?.startedAt ?? Date.now()}
                   color={color}
-                  onDone={() => {
-                    setRestingSet(null);
-                    sendPushNotification("Fim do descanso, hora da próxima série 💪", exercise.name);
-                  }}
+                  onDone={() => setRestingSet(null)}
                 />
               )}
             </div>
@@ -760,7 +732,7 @@ function HistoryScreen({ onClose, onDelete }) {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "#0a0f1a", zIndex: 200, overflowY: "auto" }}>
-      <div style={{ padding: "20px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+      <div style={{ padding: "calc(env(safe-area-inset-top) + 16px) 20px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
         <div>
           <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: "#a3e635", letterSpacing: "2px", textTransform: "uppercase" }}>TRAINEFY</p>
           <h1 style={{ margin: "2px 0 0", fontSize: 26, fontWeight: 800, color: "#f9fafb" }}>📊 Histórico</h1>
@@ -1296,16 +1268,13 @@ function HiitScreen({ onClose }) {
     const cr  = roundRef.current;
     const max = totalRoundsRef.current;
     if (cp === "work") {
-      sendPushNotification("Hora de descansar 💤", `${restTimeRef.current}s — rodada ${cr} de ${max}`);
       startPhase("rest", restTimeRef.current, cr);
     } else {
       const next = cr + 1;
       if (next > max) {
         clearInterval(intervalRef.current);
         setPhase("done"); setRunning(false);
-        sendPushNotification("HIIT concluído 🏆", `${max} rodadas completas. Ótimo trabalho`);
       } else {
-        sendPushNotification("Hora do treino 💪", `Rodada ${next} de ${max}`);
         startPhase("work", workTimeRef.current, next);
       }
     }
@@ -1510,7 +1479,7 @@ function ResetScreen({ onClose, onReset }) {
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0f1a", fontFamily: "system-ui, sans-serif" }}>
-      <div style={{ padding: "20px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+      <div style={{ padding: "calc(env(safe-area-inset-top) + 16px) 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
         <div>
           <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: "#a3e635", letterSpacing: "3px" }}>TRAINEFY</p>
           <h1 style={{ margin: "4px 0 0", fontSize: 26, fontWeight: 800, color: "#f9fafb" }}>Zerar dados</h1>
@@ -1657,7 +1626,7 @@ function ImportScreen({ onClose, onImport }) {
   return (
     <div style={{ minHeight: "100vh", background: "#0a0f1a", fontFamily: "system-ui, sans-serif" }}>
       {/* Header */}
-      <div style={{ padding: "20px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+      <div style={{ padding: "calc(env(safe-area-inset-top) + 16px) 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
         <div>
           <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: "#a3e635", letterSpacing: "3px" }}>TRAINEFY</p>
           <h1 style={{ margin: "4px 0 0", fontSize: 26, fontWeight: 800, color: "#f9fafb" }}>Importar treino</h1>
