@@ -933,9 +933,7 @@ function WorkoutSummary({ session, onClose }) {
 
 // ── DASHBOARD SCREEN ──────────────────────────────────────────────────────
 function DashboardScreen({ history, workouts, onClose }) {
-  const [aiText, setAiText] = useState("");
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   // ── COMPUTE METRICS ─────────────────────────────────────────────────────
   const now = new Date();
@@ -1052,31 +1050,26 @@ Dados do atleta:
 Faça uma análise motivadora e honesta: aponte o que está bom, identifique padrões, e dê UMA sugestão de melhoria concreta baseada nos dados reais acima.`;
   }
 
-  async function generateAI() {
-    setAiLoading(true);
-    setAiError(null);
-    setAiText("");
-    try {
-      const res = await fetch("/api/ai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          messages: [{ role: "user", content: buildPrompt() }],
-        }),
-      });
-      const data = await res.json();
-      const text = data.content?.map(c => c.text || "").join("") || "";
-      if (!text) throw new Error("Sem resposta");
-      setAiText(text);
-    } catch (e) {
-      setAiError("Não foi possível gerar análise. Tente novamente.");
-    }
-    setAiLoading(false);
+  function copyPrompt() {
+    const text = buildPrompt();
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }).catch(() => {
+      // fallback for older browsers
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
   }
-
-  useEffect(() => { if (history.length > 0) generateAI(); }, []);
 
   const MUSCLE_COLORS_LOCAL = {
     Peito: "#f97316", Costas: "#3b82f6", Quadríceps: "#eab308",
@@ -1192,24 +1185,27 @@ Faça uma análise motivadora e honesta: aponte o que está bom, identifique pad
               </div>
             )}
 
-            {/* ── AI ANALYSIS ── */}
+            {/* ── COPY PROMPT ── */}
             <div style={{ background: "#111827", borderRadius: 16, padding: 16, marginBottom: 12, border: "1px solid #a3e63533" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#a3e635", textTransform: "uppercase", letterSpacing: "1px" }}>🤖 Análise do seu coach IA</p>
-                <button onClick={generateAI} disabled={aiLoading} style={{ background: "#1f2937", border: "none", borderRadius: 8, padding: "6px 10px", cursor: aiLoading ? "default" : "pointer", color: "#6b7280", fontSize: 11, fontWeight: 600 }}>
-                  {aiLoading ? "⏳" : "↺ Gerar"}
-                </button>
-              </div>
-              {aiLoading && (
-                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 0" }}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#a3e635", animation: "pulse 1s infinite" }} />
-                  <span style={{ fontSize: 13, color: "#4b5563" }}>Analisando seus dados...</span>
-                </div>
-              )}
-              {aiError && <p style={{ margin: 0, fontSize: 13, color: "#ef4444" }}>{aiError}</p>}
-              {aiText && !aiLoading && (
-                <p style={{ margin: 0, fontSize: 14, color: "#d1d5db", lineHeight: 1.7 }}>{aiText}</p>
-              )}
+              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: "#a3e635", textTransform: "uppercase", letterSpacing: "1px" }}>🤖 Análise com IA</p>
+              <p style={{ margin: "0 0 16px", fontSize: 13, color: "#6b7280", lineHeight: 1.6 }}>
+                Copie seus dados de treino e cole no <strong style={{ color: "#d1d5db" }}>claude.ai</strong> para receber uma análise personalizada do seu coach IA.
+              </p>
+              <button
+                onClick={copyPrompt}
+                style={{
+                  width: "100%",
+                  background: copied ? "#a3e63522" : "#1f2937",
+                  border: `1.5px solid ${copied ? "#a3e635" : "#374151"}`,
+                  borderRadius: 12, padding: "14px 0", cursor: "pointer",
+                  color: copied ? "#a3e635" : "#f9fafb",
+                  fontSize: 14, fontWeight: 700,
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  transition: "all 0.2s",
+                }}
+              >
+                {copied ? "✓ Copiado! Cole no claude.ai" : "📋 Copiar dados para análise"}
+              </button>
             </div>
           </>
         )}
