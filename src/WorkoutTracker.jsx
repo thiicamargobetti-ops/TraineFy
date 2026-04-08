@@ -732,8 +732,8 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
 }
 
 // ── HISTORY SCREEN ───────────────────────────────────────────────────────
-function HistoryScreen({ onClose, onDelete }) {
-  const [history, setHistoryLocal] = useState(loadHistory);
+function HistoryScreen({ onClose, onDelete, history: historyProp }) {
+  const [history, setHistoryLocal] = useState(() => historyProp?.length ? historyProp : loadHistory());
   const [selectedEx, setSelectedEx] = useState(null);
 
   function deleteSession(indexFromEnd) {
@@ -1247,44 +1247,31 @@ Faça uma análise motivadora e honesta: aponte o que está bom, identifique pad
 }
 
 
-
 // ── AI GENERATOR SCREEN ───────────────────────────────────────────────────
 function AIGeneratorScreen({ onClose, onImport }) {
   const TOTAL_STEPS = 7;
   const [step, setStep] = useState(1);
   const [answers, setAnswers] = useState({
-    days: null,
-    duration: 60,
-    level: null,
-    goals: [],
-    weight: "",
-    height: "",
-    focus: [],
+    days: null, duration: 60, level: null,
+    goals: [], weight: "", height: "", focus: [],
   });
   const [copied, setCopied] = useState(false);
   const [pastedText, setPastedText] = useState("");
-  const [importStatus, setImportStatus] = useState(null); // null | 'success' | 'error'
+  const [importStatus, setImportStatus] = useState(null);
   const [importMsg, setImportMsg] = useState("");
 
   const imc = answers.weight && answers.height
     ? (parseFloat(answers.weight) / Math.pow(parseFloat(answers.height) / 100, 2)).toFixed(1)
     : null;
-
   const imcLabel = imc
-    ? imc < 18.5 ? "Abaixo do peso"
-    : imc < 25 ? "Peso normal"
-    : imc < 30 ? "Sobrepeso"
-    : "Obesidade"
+    ? imc < 18.5 ? "Abaixo do peso" : imc < 25 ? "Peso normal" : imc < 30 ? "Sobrepeso" : "Obesidade"
     : null;
 
   function buildPrompt() {
     const { days, duration, level, goals, weight, height, focus } = answers;
     const focusTxt = focus.length ? `Foco extra em: ${focus.join(", ")}.` : "";
-    const measuresTxt = weight && height
-      ? `Peso: ${weight}kg, Altura: ${height}cm (IMC ${imc} — ${imcLabel}).`
-      : "";
-
-    return `Você é um personal trainer especialista. Crie um plano de treino completo e detalhado em formato CSV.
+    const measuresTxt = weight && height ? `Peso: ${weight}kg, Altura: ${height}cm (IMC ${imc} — ${imcLabel}).` : "";
+    return `Você é um personal trainer especialista. Crie um plano de treino completo em formato CSV.
 
 PERFIL DO ALUNO:
 - Frequência: ${days} dias por semana
@@ -1297,35 +1284,24 @@ ${focusTxt}
 INSTRUÇÕES OBRIGATÓRIAS:
 1. Gere EXATAMENTE ${days} treinos distintos, nomeados como "Treino A", "Treino B", etc.
 2. Cada treino deve caber em ${duration} minutos considerando séries, reps e descanso.
-3. Use grupos musculares SOMENTE desta lista exata: Peito, Costas, Quadríceps, Post. Coxa, Glúteos, Panturrilha, Bíceps, Tríceps, Ombros, Trapézio, Antebraço, Core
+3. Use grupos musculares SOMENTE desta lista: Peito, Costas, Quadríceps, Post. Coxa, Glúteos, Panturrilha, Bíceps, Tríceps, Ombros, Trapézio, Antebraço, Core
 4. Adapte volume e intensidade para nível ${level}.
 
-FORMATO DE SAÍDA — responda APENAS com o CSV abaixo, sem texto adicional, sem explicações:
+FORMATO DE SAÍDA — responda APENAS com o CSV, sem texto adicional:
 
 Treino,Exercício,Grupo,Séries,Reps,Carga (kg),Descanso (seg)
-Treino A,Nome do Exercício,Grupo,4,10,60,90
-Treino A,Nome do Exercício,Grupo,3,12,40,60
-Treino B,Nome do Exercício,Grupo,4,8,80,120
+Treino A,Supino Reto com Barra,Peito,4,10,60,90
 
-Regras do CSV:
-- Separador: vírgula
-- Sem aspas nos campos
-- Carga em kg (use 0 para exercícios bodyweight)
-- Descanso em segundos (60 a 180)
-- Reps entre 6 e 20
-- Séries entre 3 e 5
-- Mínimo 4 exercícios por treino, máximo 7`;
+Regras: separador vírgula, sem aspas, carga em kg (0 para bodyweight), descanso em segundos (60-180), reps 6-20, séries 3-5, mínimo 4 exercícios por treino.`;
   }
 
   function handleCopy() {
     const prompt = buildPrompt();
     navigator.clipboard.writeText(prompt).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+      setCopied(true); setTimeout(() => setCopied(false), 2500);
     }).catch(() => {
       const ta = document.createElement("textarea");
-      ta.value = prompt;
-      ta.style.position = "fixed"; ta.style.opacity = "0";
+      ta.value = prompt; ta.style.position = "fixed"; ta.style.opacity = "0";
       document.body.appendChild(ta); ta.focus(); ta.select();
       document.execCommand("copy"); document.body.removeChild(ta);
       setCopied(true); setTimeout(() => setCopied(false), 2500);
@@ -1335,10 +1311,8 @@ Regras do CSV:
   function parseCSVText(text) {
     const lines = text.trim().split("\n").filter(l => l.trim());
     if (lines.length < 2) throw new Error("Conteúdo inválido ou vazio.");
-
     const sep = lines[0].includes(";") ? ";" : ",";
-    const headers = lines[0].split(sep).map(h => h.trim().toLowerCase().replace(/[^a-záéíóúâêôãçüà ]/gi, "").trim());
-
+    const headers = lines[0].split(sep).map(h => h.trim().toLowerCase());
     const workoutIdx = headers.findIndex(h => h.includes("treino") || h.includes("dia"));
     const nameIdx    = headers.findIndex(h => h.includes("exerc"));
     const groupIdx   = headers.findIndex(h => h.includes("grupo"));
@@ -1346,22 +1320,17 @@ Regras do CSV:
     const repsIdx    = headers.findIndex(h => h.includes("rep"));
     const weightIdx  = headers.findIndex(h => h.includes("carga") || h.includes("kg"));
     const restIdx    = headers.findIndex(h => h.includes("descanso") || h.includes("seg"));
-
-    if (workoutIdx === -1 || nameIdx === -1)
-      throw new Error("Formato inválido. Certifique-se que o CSV tem colunas Treino e Exercício.");
-
+    if (workoutIdx === -1 || nameIdx === -1) throw new Error("Formato inválido. O CSV precisa ter colunas Treino e Exercício.");
     const workoutMap = new Map();
     for (let i = 1; i < lines.length; i++) {
       const cols = lines[i].split(sep).map(c => c.trim().replace(/^"|"$/g, ""));
       const wName = cols[workoutIdx] || ""; const exName = cols[nameIdx] || "";
       if (!wName || !exName) continue;
-
-      const group   = groupIdx  !== -1 ? cols[groupIdx]  : "Core";
-      const sets    = setsIdx   !== -1 ? Math.max(1, parseInt(cols[setsIdx]) || 3) : 3;
-      const reps    = repsIdx   !== -1 ? Math.max(1, parseInt(cols[repsIdx]) || 12) : 12;
-      const weight  = weightIdx !== -1 ? parseFloat(cols[weightIdx]) || null : null;
-      const restTime = restIdx  !== -1 ? parseInt(cols[restIdx]) || 90 : 90;
-
+      const group    = groupIdx   !== -1 ? cols[groupIdx]  : "Core";
+      const sets     = setsIdx    !== -1 ? Math.max(1, parseInt(cols[setsIdx])  || 3)  : 3;
+      const reps     = repsIdx    !== -1 ? Math.max(1, parseInt(cols[repsIdx])  || 12) : 12;
+      const weight   = weightIdx  !== -1 ? parseFloat(cols[weightIdx]) || null : null;
+      const restTime = restIdx    !== -1 ? parseInt(cols[restIdx]) || 90 : 90;
       if (!workoutMap.has(wName)) workoutMap.set(wName, []);
       workoutMap.get(wName).push({
         id: Math.random().toString(36).slice(2, 9),
@@ -1370,7 +1339,6 @@ Regras do CSV:
       });
     }
     if (workoutMap.size === 0) throw new Error("Nenhum exercício encontrado no conteúdo colado.");
-
     const workouts = Array.from(workoutMap.entries()).map(([name, exercises]) => ({
       id: Math.random().toString(36).slice(2, 9), name, exercises,
     }));
@@ -1391,32 +1359,27 @@ Regras do CSV:
 
   const canAdvance = () => {
     if (step === 1) return answers.days !== null;
-    if (step === 2) return true;
     if (step === 3) return answers.level !== null;
     if (step === 4) return answers.goals.length > 0;
-    if (step === 5) return true;
-    if (step === 6) return true;
     return true;
   };
 
   const stepTitles = ["Frequência", "Duração", "Nível", "Objetivo", "Medidas", "Foco muscular", "Gerar treino"];
 
-  // ── STEP RENDERS ──────────────────────────────────────────────────────────
   function renderStep() {
     const { days, duration, level, goals, weight, height, focus } = answers;
 
     if (step === 1) return (
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <p style={{ margin: "0 0 4px", fontSize: 15, color: "#9ca3af", lineHeight: 1.5 }}>Quantos dias por semana você pretende treinar?</p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, marginTop: 8 }}>
-          {[2, 3, 4, 5, 6].map(d => (
+        <p style={{ margin: "0 0 8px", fontSize: 15, color: "#9ca3af", lineHeight: 1.5 }}>Quantos dias por semana você pretende treinar?</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 8 }}>
+          {[2, 3, 4, 5, 6, 7].map(d => (
             <button key={d} onClick={() => setAnswers(a => ({ ...a, days: d }))} style={{
               background: days === d ? "#22d3ee" : "#1f2937",
               border: `2px solid ${days === d ? "#22d3ee" : "#374151"}`,
-              borderRadius: 14, padding: "18px 0",
-              cursor: "pointer", fontSize: 22, fontWeight: 800,
-              color: days === d ? "#0a0a0a" : "#f9fafb",
-              transition: "all 0.15s",
+              borderRadius: 12, padding: "16px 0",
+              cursor: "pointer", fontSize: 20, fontWeight: 800,
+              color: days === d ? "#0a0a0a" : "#f9fafb", transition: "all 0.15s",
             }}>{d}</button>
           ))}
         </div>
@@ -1425,11 +1388,11 @@ Regras do CSV:
     );
 
     if (step === 2) return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 24 }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
         <p style={{ margin: 0, fontSize: 15, color: "#9ca3af", lineHeight: 1.5, alignSelf: "flex-start" }}>Quanto tempo você tem por sessão?</p>
-        <div style={{ background: "#111827", borderRadius: 20, padding: "28px 40px", border: "1px solid #22d3ee33", display: "flex", flexDirection: "column", alignItems: "center", gap: 16, width: "100%", boxSizing: "border-box" }}>
+        <div style={{ background: "#111827", borderRadius: 20, padding: "28px 32px", border: "1px solid #22d3ee33", display: "flex", flexDirection: "column", alignItems: "center", gap: 16, width: "100%", boxSizing: "border-box" }}>
           <p style={{ margin: 0, fontSize: 11, color: "#22d3ee", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.5px" }}>Duração da sessão</p>
-          <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
             <button onClick={() => setAnswers(a => ({ ...a, duration: Math.max(20, a.duration - 10) }))} style={{ width: 52, height: 52, borderRadius: 14, background: "#1f2937", border: "none", color: "#f9fafb", fontSize: 24, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
             <div style={{ textAlign: "center" }}>
               <span style={{ fontSize: 56, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{duration}</span>
@@ -1442,7 +1405,7 @@ Regras do CSV:
               <button key={m} onClick={() => setAnswers(a => ({ ...a, duration: m }))} style={{
                 background: duration === m ? "#22d3ee22" : "#0a0f1a",
                 border: `1.5px solid ${duration === m ? "#22d3ee" : "#374151"}`,
-                borderRadius: 8, padding: "6px 12px", cursor: "pointer",
+                borderRadius: 8, padding: "6px 14px", cursor: "pointer",
                 fontSize: 12, fontWeight: 700, color: duration === m ? "#22d3ee" : "#6b7280",
               }}>{m}min</button>
             ))}
@@ -1453,62 +1416,56 @@ Regras do CSV:
 
     if (step === 3) return (
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <p style={{ margin: "0 0 4px", fontSize: 15, color: "#9ca3af", lineHeight: 1.5 }}>Qual é o seu nível de experiência?</p>
-        {["Iniciante", "Intermediário", "Avançado"].map(lv => (
+        <p style={{ margin: "0 0 8px", fontSize: 15, color: "#9ca3af", lineHeight: 1.5 }}>Qual é o seu nível de experiência?</p>
+        {[
+          { lv: "Iniciante", icon: "🌱", sub: "Menos de 1 ano de treino" },
+          { lv: "Intermediário", icon: "💪", sub: "1 a 3 anos de treino" },
+          { lv: "Avançado", icon: "🔥", sub: "Mais de 3 anos de treino" },
+        ].map(({ lv, icon, sub }) => (
           <button key={lv} onClick={() => setAnswers(a => ({ ...a, level: lv }))} style={{
             background: level === lv ? "#22d3ee18" : "#111827",
             border: `2px solid ${level === lv ? "#22d3ee" : "#1f2937"}`,
-            borderRadius: 16, padding: "20px 20px",
-            cursor: "pointer", textAlign: "left",
-            display: "flex", alignItems: "center", gap: 14,
-            transition: "all 0.15s",
+            borderRadius: 16, padding: "20px", cursor: "pointer", textAlign: "left",
+            display: "flex", alignItems: "center", gap: 14, transition: "all 0.15s",
           }}>
-            <span style={{ fontSize: 26 }}>{lv === "Iniciante" ? "🌱" : lv === "Intermediário" ? "💪" : "🔥"}</span>
-            <div>
+            <span style={{ fontSize: 28 }}>{icon}</span>
+            <div style={{ flex: 1 }}>
               <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: level === lv ? "#22d3ee" : "#f9fafb" }}>{lv}</p>
-              <p style={{ margin: "2px 0 0", fontSize: 12, color: "#4b5563" }}>
-                {lv === "Iniciante" ? "Menos de 1 ano de treino"
-                  : lv === "Intermediário" ? "1 a 3 anos de treino"
-                  : "Mais de 3 anos de treino"}
-              </p>
+              <p style={{ margin: "2px 0 0", fontSize: 12, color: "#4b5563" }}>{sub}</p>
             </div>
-            {level === lv && <span style={{ marginLeft: "auto", color: "#22d3ee", fontSize: 18 }}>✓</span>}
+            {level === lv && <span style={{ color: "#22d3ee", fontSize: 18 }}>✓</span>}
           </button>
         ))}
       </div>
     );
 
     if (step === 4) return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <p style={{ margin: "0 0 4px", fontSize: 15, color: "#9ca3af", lineHeight: 1.5 }}>Qual é o seu objetivo? <span style={{ color: "#6b7280" }}>(até 2)</span></p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <p style={{ margin: "0 0 4px", fontSize: 15, color: "#9ca3af", lineHeight: 1.5 }}>Qual é o seu objetivo? <span style={{ color: "#6b7280", fontSize: 13 }}>(até 2)</span></p>
         {[
-          { id: "Hipertrofia", label: "Hipertrofia", sub: "Ganho de massa muscular", icon: "🏋️" },
-          { id: "Emagrecimento", label: "Emagrecimento", sub: "Queima de gordura", icon: "🔥" },
-          { id: "Condicionamento físico", label: "Condicionamento", sub: "Resistência e energia", icon: "🫀" },
-          { id: "Força", label: "Força", sub: "Aumentar força máxima", icon: "⚡" },
-          { id: "Saúde geral", label: "Saúde geral", sub: "Bem-estar e longevidade", icon: "🌿" },
-        ].map(({ id, label, sub, icon }) => {
+          { id: "Hipertrofia", sub: "Ganho de massa muscular", icon: "🏋️" },
+          { id: "Emagrecimento", sub: "Queima de gordura", icon: "🔥" },
+          { id: "Condicionamento físico", sub: "Resistência e energia", icon: "🫀" },
+          { id: "Força", sub: "Aumentar força máxima", icon: "⚡" },
+          { id: "Saúde geral", sub: "Bem-estar e longevidade", icon: "🌿" },
+        ].map(({ id, sub, icon }) => {
           const sel = goals.includes(id);
           const maxed = goals.length >= 2 && !sel;
           return (
-            <button key={id} onClick={() => {
-              if (maxed) return;
-              setAnswers(a => ({ ...a, goals: sel ? a.goals.filter(g => g !== id) : [...a.goals, id] }));
-            }} style={{
+            <button key={id} onClick={() => { if (maxed) return; setAnswers(a => ({ ...a, goals: sel ? a.goals.filter(g => g !== id) : [...a.goals, id] })); }} style={{
               background: sel ? "#22d3ee18" : "#111827",
-              border: `2px solid ${sel ? "#22d3ee" : maxed ? "#1f2937" : "#1f2937"}`,
-              borderRadius: 14, padding: "16px 18px",
-              cursor: maxed ? "default" : "pointer", textAlign: "left",
-              display: "flex", alignItems: "center", gap: 12,
+              border: `2px solid ${sel ? "#22d3ee" : "#1f2937"}`,
+              borderRadius: 14, padding: "14px 16px", cursor: maxed ? "default" : "pointer",
+              textAlign: "left", display: "flex", alignItems: "center", gap: 12,
               opacity: maxed ? 0.4 : 1, transition: "all 0.15s",
             }}>
               <span style={{ fontSize: 22 }}>{icon}</span>
               <div style={{ flex: 1 }}>
-                <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: sel ? "#22d3ee" : "#f9fafb" }}>{label}</p>
+                <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: sel ? "#22d3ee" : "#f9fafb" }}>{id}</p>
                 <p style={{ margin: "2px 0 0", fontSize: 12, color: "#4b5563" }}>{sub}</p>
               </div>
               <div style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${sel ? "#22d3ee" : "#374151"}`, background: sel ? "#22d3ee" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                {sel && <span style={{ color: "#0a0a0a", fontSize: 13, fontWeight: 800 }}>✓</span>}
+                {sel && <span style={{ color: "#0a0a0a", fontSize: 12, fontWeight: 800 }}>✓</span>}
               </div>
             </button>
           );
@@ -1518,13 +1475,13 @@ Regras do CSV:
 
     if (step === 5) return (
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <p style={{ margin: "0 0 4px", fontSize: 15, color: "#9ca3af", lineHeight: 1.5 }}>Suas medidas <span style={{ color: "#4b5563" }}>(opcional)</span></p>
+        <p style={{ margin: "0 0 4px", fontSize: 15, color: "#9ca3af", lineHeight: 1.5 }}>Suas medidas <span style={{ color: "#4b5563", fontSize: 13 }}>(opcional)</span></p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           {[
             { key: "weight", label: "Peso", unit: "kg", placeholder: "ex: 75" },
             { key: "height", label: "Altura", unit: "cm", placeholder: "ex: 175" },
           ].map(({ key, label, unit, placeholder }) => (
-            <div key={key} style={{ background: "#111827", borderRadius: 14, padding: "16px", border: "1px solid #1f2937" }}>
+            <div key={key} style={{ background: "#111827", borderRadius: 14, padding: 16, border: "1px solid #1f2937" }}>
               <p style={{ margin: "0 0 8px", fontSize: 11, color: "#6b7280", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px" }}>{label}</p>
               <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
                 <input type="number" value={answers[key]} onChange={e => setAnswers(a => ({ ...a, [key]: e.target.value }))}
@@ -1547,24 +1504,21 @@ Regras do CSV:
 
     if (step === 6) return (
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <p style={{ margin: "0 0 4px", fontSize: 15, color: "#9ca3af", lineHeight: 1.5 }}>Quer dar foco extra a algum grupo? <span style={{ color: "#4b5563" }}>(opcional)</span></p>
+        <p style={{ margin: "0 0 4px", fontSize: 15, color: "#9ca3af", lineHeight: 1.5 }}>Foco muscular extra <span style={{ color: "#4b5563", fontSize: 13 }}>(opcional)</span></p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {[
-            { id: "Peito", icon: "💪" }, { id: "Costas", icon: "🔙" },
+            { id: "Peito", icon: "🫁" }, { id: "Costas", icon: "🔙" },
             { id: "Pernas", icon: "🦵" }, { id: "Ombros", icon: "🤸" },
             { id: "Braços", icon: "💪" }, { id: "Glúteos", icon: "🍑" },
             { id: "Core", icon: "🎯" },
           ].map(({ id, icon }) => {
             const sel = focus.includes(id);
             return (
-              <button key={id} onClick={() => setAnswers(a => ({
-                ...a, focus: sel ? a.focus.filter(f => f !== id) : [...a.focus, id]
-              }))} style={{
+              <button key={id} onClick={() => setAnswers(a => ({ ...a, focus: sel ? a.focus.filter(f => f !== id) : [...a.focus, id] }))} style={{
                 background: sel ? "#22d3ee18" : "#111827",
                 border: `2px solid ${sel ? "#22d3ee" : "#1f2937"}`,
-                borderRadius: 14, padding: "16px 14px",
-                cursor: "pointer", display: "flex", alignItems: "center", gap: 10,
-                transition: "all 0.15s",
+                borderRadius: 14, padding: "16px 14px", cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 10, transition: "all 0.15s",
               }}>
                 <span style={{ fontSize: 20 }}>{icon}</span>
                 <span style={{ fontSize: 14, fontWeight: 600, color: sel ? "#22d3ee" : "#f9fafb" }}>{id}</span>
@@ -1577,8 +1531,7 @@ Regras do CSV:
     );
 
     if (step === 7) return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {/* Summary */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div style={{ background: "#111827", borderRadius: 16, padding: 16, border: "1px solid #22d3ee33" }}>
           <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#22d3ee", textTransform: "uppercase", letterSpacing: "1px" }}>Resumo do seu perfil</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -1598,46 +1551,40 @@ Regras do CSV:
           </div>
         </div>
 
-        {/* Step 1: Copy prompt */}
         <div style={{ background: "#111827", borderRadius: 16, padding: 16, border: "1px solid #1f2937" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
             <span style={{ background: "#22d3ee22", color: "#22d3ee", fontSize: 11, fontWeight: 800, padding: "3px 8px", borderRadius: 20 }}>Passo 1</span>
             <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#f9fafb" }}>Copie o prompt gerado</p>
           </div>
-          <p style={{ margin: "0 0 12px", fontSize: 12, color: "#6b7280", lineHeight: 1.6 }}>
-            Cole no <strong style={{ color: "#d1d5db" }}>claude.ai</strong> ou outra IA de sua preferência.
-          </p>
+          <p style={{ margin: "0 0 12px", fontSize: 12, color: "#6b7280", lineHeight: 1.6 }}>Cole no <strong style={{ color: "#d1d5db" }}>claude.ai</strong> ou outra IA de sua preferência.</p>
           <button onClick={handleCopy} style={{
             width: "100%", background: copied ? "#22d3ee22" : "#1f2937",
             border: `1.5px solid ${copied ? "#22d3ee" : "#374151"}`,
             borderRadius: 12, padding: "14px 0", cursor: "pointer",
             color: copied ? "#22d3ee" : "#f9fafb", fontSize: 14, fontWeight: 700,
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            transition: "all 0.2s",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.2s",
           }}>
             {copied ? "✓ Copiado! Cole no claude.ai" : "📋 Copiar prompt"}
           </button>
         </div>
 
-        {/* Step 2: Paste result */}
         <div style={{ background: "#111827", borderRadius: 16, padding: 16, border: "1px solid #1f2937" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
             <span style={{ background: "#a3e63522", color: "#a3e635", fontSize: 11, fontWeight: 800, padding: "3px 8px", borderRadius: 20 }}>Passo 2</span>
             <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#f9fafb" }}>Cole a resposta da IA</p>
           </div>
-          <textarea
-            value={pastedText}
-            onChange={e => { setPastedText(e.target.value); setImportStatus(null); }}
-            placeholder={"Cole aqui o CSV gerado pela IA...\n\nTreino,Exercício,Grupo,Séries,Reps,Carga (kg),Descanso (seg)\nTreino A,Supino Reto com Barra,Peito,4,10,60,90"}
+          <textarea value={pastedText} onChange={e => { setPastedText(e.target.value); setImportStatus(null); }}
+            placeholder={"Cole aqui o CSV gerado pela IA...
+
+Treino,Exercício,Grupo,Séries,Reps,Carga (kg),Descanso (seg)
+Treino A,Supino Reto com Barra,Peito,4,10,60,90"}
             style={{
-              width: "100%", minHeight: 120, background: "#0d1524",
+              width: "100%", minHeight: 130, background: "#0d1524",
               border: "1.5px solid #374151", borderRadius: 10,
               padding: "12px 14px", color: "#d1d5db", fontSize: 12,
               fontFamily: "monospace", lineHeight: 1.5, outline: "none",
-              resize: "vertical", boxSizing: "border-box",
-              marginBottom: 12,
-            }}
-          />
+              resize: "vertical", boxSizing: "border-box", marginBottom: 12,
+            }} />
           {importStatus && (
             <div style={{ marginBottom: 12, padding: "10px 14px", borderRadius: 10, background: importStatus === "success" ? "#a3e63522" : "#ef444422", border: `1px solid ${importStatus === "success" ? "#a3e635" : "#ef4444"}` }}>
               <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: importStatus === "success" ? "#a3e635" : "#ef4444" }}>
@@ -1650,8 +1597,7 @@ Regras do CSV:
             border: "none", borderRadius: 12, padding: "14px 0",
             cursor: pastedText.trim() ? "pointer" : "default",
             color: pastedText.trim() ? "#0a0a0a" : "#4b5563",
-            fontSize: 15, fontWeight: 800,
-            transition: "all 0.2s",
+            fontSize: 15, fontWeight: 800, transition: "all 0.2s",
           }}>
             ✓ Importar treino
           </button>
@@ -1662,7 +1608,6 @@ Regras do CSV:
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0f1a", fontFamily: "system-ui, -apple-system, sans-serif", display: "flex", flexDirection: "column" }}>
-      {/* Header */}
       <div style={{ position: "sticky", top: 0, zIndex: 10, background: "#0a0f1a", paddingTop: "env(safe-area-inset-top)" }}>
         <div style={{ padding: "14px 20px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
@@ -1671,16 +1616,10 @@ Regras do CSV:
           </div>
           <button onClick={onClose} style={{ background: "#1f2937", border: "none", borderRadius: 10, padding: "8px 14px", cursor: "pointer", color: "#9ca3af", fontSize: 13, fontWeight: 600 }}>← Voltar</button>
         </div>
-
-        {/* Progress bar */}
         <div style={{ padding: "0 20px 12px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 6 }}>
             {Array.from({ length: TOTAL_STEPS }, (_, i) => (
-              <div key={i} style={{
-                flex: 1, height: 3, borderRadius: 2,
-                background: i < step ? "#22d3ee" : "#1f2937",
-                transition: "background 0.3s",
-              }} />
+              <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: i < step ? "#22d3ee" : "#1f2937", transition: "background 0.3s" }} />
             ))}
           </div>
           <p style={{ margin: 0, fontSize: 11, color: "#4b5563" }}>Etapa {step} de {TOTAL_STEPS} — {stepTitles[step - 1]}</p>
@@ -1688,17 +1627,13 @@ Regras do CSV:
         <div style={{ height: 1, background: "#1a2234" }} />
       </div>
 
-      {/* Content */}
       <div style={{ flex: 1, padding: "24px 20px", overflowY: "auto", WebkitOverflowScrolling: "touch", paddingBottom: "calc(env(safe-area-inset-bottom) + 100px)" }}>
         {renderStep()}
       </div>
 
-      {/* Bottom nav */}
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#0a0f1a", borderTop: "1px solid #1a2234", padding: "12px 20px", paddingBottom: "max(16px, env(safe-area-inset-bottom))", display: "flex", gap: 10 }}>
         {step > 1 && step < 7 && (
-          <button onClick={() => setStep(s => s - 1)} style={{ flex: 1, background: "#1f2937", border: "1.5px solid #374151", borderRadius: 14, padding: "14px 0", cursor: "pointer", color: "#9ca3af", fontSize: 14, fontWeight: 700 }}>
-            ← Voltar
-          </button>
+          <button onClick={() => setStep(s => s - 1)} style={{ flex: 1, background: "#1f2937", border: "1.5px solid #374151", borderRadius: 14, padding: "14px 0", cursor: "pointer", color: "#9ca3af", fontSize: 14, fontWeight: 700 }}>← Voltar</button>
         )}
         {step < 7 && (
           <button onClick={() => { if (canAdvance()) setStep(s => s + 1); }} style={{
@@ -1706,10 +1641,9 @@ Regras do CSV:
             border: "none", borderRadius: 14, padding: "14px 0",
             cursor: canAdvance() ? "pointer" : "default",
             color: canAdvance() ? "#0a0a0a" : "#4b5563",
-            fontSize: 15, fontWeight: 800,
-            transition: "all 0.2s",
+            fontSize: 15, fontWeight: 800, transition: "all 0.2s",
           }}>
-            {step === 6 ? "Gerar treino →" : step === 5 ? (answers.weight || answers.height ? "Continuar →" : "Pular →") : step === 6 ? (answers.focus.length ? "Continuar →" : "Pular →") : "Continuar →"}
+            {step === 6 ? "Gerar treino →" : step === 5 && !answers.weight && !answers.height ? "Pular →" : "Continuar →"}
           </button>
         )}
       </div>
@@ -2452,7 +2386,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
     </div>
   );
 
-  if (showHistory) return <HistoryScreen onClose={() => setShowHistory(false)} onDelete={(updated) => { setHistory(updated); saveHistoryToCloud(userId, updated).catch(() => {}); }} />;
+  if (showHistory) return <HistoryScreen history={history} onClose={() => setShowHistory(false)} onDelete={(updated) => { setHistory(updated); saveHistoryToCloud(userId, updated).catch(() => {}); }} />;
   if (showImport) return <ImportScreen onClose={() => setShowImport(false)} onImport={(imported) => { setData(imported); setActiveIdx(0); setShowImport(false); }} />;
   if (showReset) return <ResetScreen onClose={() => setShowReset(false)} onReset={() => {
     const empty = { workouts: [] };
