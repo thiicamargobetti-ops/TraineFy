@@ -843,6 +843,295 @@ function Copyright() {
   );
 }
 
+// ── DASHBOARD SCREEN ──────────────────────────────────────────────────────
+function DashboardScreen({ history, workouts, onClose }) {
+  const [aiText, setAiText] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
+
+  // ── COMPUTE METRICS ─────────────────────────────────────────────────────
+  const now = new Date();
+
+  // 1. Total sessions and last 30 days
+  const sessions30 = history.filter(s => {
+    const [d, m, y] = (s.dateShort || "").split("/");
+    if (!d) return false;
+    const date = new Date(`20${y || now.getFullYear().toString().slice(2)}-${m}-${d}`);
+    return (now - date) / 86400000 <= 30;
+  });
+
+  // 2. Weekly frequency (last 4 weeks)
+  const weeklyCount = [0, 0, 0, 0];
+  history.forEach(s => {
+    const [d, m] = (s.dateShort || "").split("/");
+    if (!d) return;
+    const date = new Date(`${now.getFullYear()}-${m}-${d}`);
+    const daysAgo = Math.floor((now - date) / 86400000);
+    if (daysAgo < 7) weeklyCount[0]++;
+    else if (daysAgo < 14) weeklyCount[1]++;
+    else if (daysAgo < 21) weeklyCount[2]++;
+    else if (daysAgo < 28) weeklyCount[3]++;
+  });
+  const avgWeekly = weeklyCount.filter(w => w > 0).length > 0
+    ? (weeklyCount.reduce((a, b) => a + b, 0) / 4).toFixed(1)
+    : "0";
+
+  // 3. Streak
+  let streak = 0;
+  const sessionDates = [...new Set(history.map(s => s.dateShort))].sort().reverse();
+  let cursor = new Date();
+  cursor.setHours(0,0,0,0);
+  for (const ds of sessionDates) {
+    const [d, m] = (ds || "").split("/");
+    if (!d) continue;
+    const date = new Date(`${cursor.getFullYear()}-${m}-${d}`);
+    const diff = Math.floor((cursor - date) / 86400000);
+    if (diff === 0 || diff === 1) { streak++; cursor = date; }
+    else break;
+  }
+
+  // 4. Volume trend (this week vs last week)
+  const volThisWeek = history.filter(s => {
+    const [d, m] = (s.dateShort||"").split("/");
+    if(!d) return false;
+    return (now - new Date(`${now.getFullYear()}-${m}-${d}`)) / 86400000 < 7;
+  }).reduce((a, s) => a + (s.volume || 0), 0);
+
+  const volLastWeek = history.filter(s => {
+    const [d, m] = (s.dateShort||"").split("/");
+    if(!d) return false;
+    const days = (now - new Date(`${now.getFullYear()}-${m}-${d}`)) / 86400000;
+    return days >= 7 && days < 14;
+  }).reduce((a, s) => a + (s.volume || 0), 0);
+
+  const volTrend = volLastWeek > 0
+    ? Math.round(((volThisWeek - volLastWeek) / volLastWeek) * 100)
+    : null;
+
+  // 5. PRs (best weight per exercise across all history)
+  const prMap = {};
+  history.forEach(s => {
+    (s.exercises || []).forEach(ex => {
+      const weights = (ex.setWeights || []).map(Number).filter(w => w > 0);
+      if (!weights.length) return;
+      const best = Math.max(...weights);
+      if (!prMap[ex.name] || best > prMap[ex.name].weight) {
+        const [d, m] = (s.dateShort||"").split("/");
+        prMap[ex.name] = { weight: best, date: s.dateShort, group: ex.group };
+      }
+    });
+  });
+  const topPRs = Object.entries(prMap)
+    .sort((a, b) => b[1].weight - a[1].weight)
+    .slice(0, 5);
+
+  // 6. Muscle balance (count sessions per group)
+  const groupCount = {};
+  history.forEach(s => {
+    (s.exercises || []).forEach(ex => {
+      if (ex.group) groupCount[ex.group] = (groupCount[ex.group] || 0) + 1;
+    });
+  });
+  const topGroups = Object.entries(groupCount).sort((a,b) => b[1]-a[1]).slice(0, 6);
+  const maxGroupCount = topGroups[0]?.[1] || 1;
+
+  // ── BUILD SUMMARY FOR AI ─────────────────────────────────────────────────
+  function buildPrompt() {
+    const prList = topPRs.map(([name, {weight}]) => `${name}: ${weight}kg`).join(", ");
+    const groups = topGroups.map(([g, c]) => `${g}(${c}x)`).join(", ");
+    const totalVol = history.reduce((a, s) => a + (s.volume || 0), 0);
+    const avgDur = history.length > 0
+      ? history.map(s => {
+          const t = (s.duration||"0:00").split(":");
+          return t.length === 2 ? parseInt(t[0])*60+parseInt(t[1]) : 0;
+        }).reduce((a,b)=>a+b,0) / history.length
+      : 0;
+
+    return `Você é um coach de musculação experiente analisando os dados de treino de um atleta. Seja direto, motivador e personalizado. Escreva em português, com no máximo 5 frases. NÃO use markdown, bullets ou títulos — apenas texto corrido.
+
+Dados do atleta:
+- Total de sessões registradas: ${history.length}
+- Sessões nos últimos 30 dias: ${sessions30.length}
+- Frequência média semanal: ${avgWeekly}x/semana
+- Sequência atual: ${streak} dia${streak !== 1 ? "s" : ""} consecutivos
+- Volume esta semana: ${Math.round(volThisWeek)}kg${volTrend !== null ? ` (${volTrend > 0 ? "+" : ""}${volTrend}% vs semana passada)` : ""}
+- Volume total histórico: ${Math.round(totalVol)}kg
+- Duração média de treino: ${Math.round(avgDur/60)}min
+- Melhores cargas (top PRs): ${prList || "sem dados ainda"}
+- Grupos mais treinados: ${groups || "sem dados ainda"}
+- Treinos cadastrados: ${workouts.map(w=>w.name).join(", ") || "nenhum"}
+
+Faça uma análise motivadora e honesta: aponte o que está bom, identifique padrões, e dê UMA sugestão de melhoria concreta baseada nos dados reais acima.`;
+  }
+
+  async function generateAI() {
+    setAiLoading(true);
+    setAiError(null);
+    setAiText("");
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [{ role: "user", content: buildPrompt() }],
+        }),
+      });
+      const data = await res.json();
+      const text = data.content?.map(c => c.text || "").join("") || "";
+      if (!text) throw new Error("Sem resposta");
+      setAiText(text);
+    } catch (e) {
+      setAiError("Não foi possível gerar análise. Tente novamente.");
+    }
+    setAiLoading(false);
+  }
+
+  useEffect(() => { if (history.length > 0) generateAI(); }, []);
+
+  const MUSCLE_COLORS_LOCAL = {
+    Peito: "#f97316", Costas: "#3b82f6", Quadríceps: "#eab308",
+    "Post. Coxa": "#f59e0b", Glúteos: "#ec4899", Panturrilha: "#14b8a6",
+    Bíceps: "#a78bfa", Tríceps: "#6366f1", Ombros: "#a855f7",
+    Trapézio: "#64748b", Antebraço: "#0ea5e9", Core: "#ef4444",
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#0a0f1a", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+      {/* Header */}
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 50, background: "#0a0f1a", paddingTop: "env(safe-area-inset-top)" }}>
+        <div style={{ padding: "14px 20px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: "#a3e635", letterSpacing: "2px" }}>TRAINEFY</p>
+            <h1 style={{ margin: "2px 0 0", fontSize: 22, fontWeight: 800, color: "#f9fafb" }}>🤖 Dashboard IA</h1>
+          </div>
+          <button onClick={onClose} style={{ background: "#1f2937", border: "none", borderRadius: 10, padding: "10px 16px", cursor: "pointer", color: "#9ca3af", fontSize: 13, fontWeight: 600 }}>← Voltar</button>
+        </div>
+        <div style={{ height: 1, background: "#1a2234" }} />
+      </div>
+
+      <div style={{ paddingTop: "calc(env(safe-area-inset-top) + 80px)", paddingBottom: "calc(env(safe-area-inset-bottom) + 24px)", padding: "calc(env(safe-area-inset-top) + 88px) 16px calc(env(safe-area-inset-bottom) + 24px)" }}>
+
+        {history.length === 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", gap: 16 }}>
+            <span style={{ fontSize: 56 }}>📊</span>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "#f9fafb", textAlign: "center" }}>Sem dados ainda</p>
+            <p style={{ fontSize: 13, color: "#4b5563", textAlign: "center", lineHeight: 1.6 }}>Complete alguns treinos para ver seus insights personalizados aqui.</p>
+          </div>
+        ) : (
+          <>
+            {/* ── STAT CARDS ROW ── */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 16 }}>
+              {[
+                { label: "Sessões", value: history.length, icon: "📅", color: "#3b82f6" },
+                { label: "Frequência", value: `${avgWeekly}x/sem`, icon: "⚡", color: "#a3e635" },
+                { label: "Streak", value: `${streak}d`, icon: "🔥", color: "#f97316" },
+              ].map(({ label, value, icon, color }) => (
+                <div key={label} style={{ background: "#111827", borderRadius: 14, padding: "14px 10px", border: `1px solid ${color}33`, textAlign: "center" }}>
+                  <div style={{ fontSize: 20 }}>{icon}</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color, marginTop: 4 }}>{value}</div>
+                  <div style={{ fontSize: 10, color: "#4b5563", fontWeight: 600, marginTop: 2 }}>{label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* ── VOLUME TREND ── */}
+            <div style={{ background: "#111827", borderRadius: 16, padding: 16, marginBottom: 12, border: "1px solid #1f2937" }}>
+              <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "1px" }}>📈 Volume semanal</p>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 8 }}>
+                <div>
+                  <span style={{ fontSize: 28, fontWeight: 800, color: "#f9fafb" }}>{Math.round(volThisWeek).toLocaleString()}</span>
+                  <span style={{ fontSize: 13, color: "#4b5563", marginLeft: 4 }}>kg esta semana</span>
+                </div>
+                {volTrend !== null && (
+                  <div style={{ background: volTrend >= 0 ? "#a3e63522" : "#ef444422", borderRadius: 10, padding: "6px 12px", border: `1px solid ${volTrend >= 0 ? "#a3e635" : "#ef4444"}44` }}>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: volTrend >= 0 ? "#a3e635" : "#ef4444" }}>
+                      {volTrend > 0 ? "+" : ""}{volTrend}%
+                    </span>
+                    <span style={{ fontSize: 10, color: "#4b5563", marginLeft: 4 }}>vs sem. passada</span>
+                  </div>
+                )}
+              </div>
+              {volTrend === null && volLastWeek === 0 && (
+                <p style={{ margin: "8px 0 0", fontSize: 12, color: "#4b5563" }}>Complete treinos por 2 semanas para ver a comparação.</p>
+              )}
+            </div>
+
+            {/* ── MUSCLE BALANCE ── */}
+            {topGroups.length > 0 && (
+              <div style={{ background: "#111827", borderRadius: 16, padding: 16, marginBottom: 12, border: "1px solid #1f2937" }}>
+                <p style={{ margin: "0 0 14px", fontSize: 12, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "1px" }}>⚖️ Frequência por grupo muscular</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {topGroups.map(([group, count]) => {
+                    const color = MUSCLE_COLORS_LOCAL[group] || "#6b7280";
+                    const pct = Math.round((count / maxGroupCount) * 100);
+                    return (
+                      <div key={group}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: "#d1d5db" }}>{group}</span>
+                          <span style={{ fontSize: 12, color: "#4b5563" }}>{count}x</span>
+                        </div>
+                        <div style={{ height: 6, background: "#1f2937", borderRadius: 3 }}>
+                          <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 3, transition: "width 0.6s ease" }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ── TOP PRs ── */}
+            {topPRs.length > 0 && (
+              <div style={{ background: "#111827", borderRadius: 16, padding: 16, marginBottom: 12, border: "1px solid #1f2937" }}>
+                <p style={{ margin: "0 0 14px", fontSize: 12, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "1px" }}>🏆 Melhores cargas (PRs)</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {topPRs.map(([name, { weight, group, date }], idx) => {
+                    const color = MUSCLE_COLORS_LOCAL[group] || "#6b7280";
+                    return (
+                      <div key={name} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "#0d1524", borderRadius: 10 }}>
+                        <span style={{ fontSize: 13, fontWeight: 800, color: idx === 0 ? "#fbbf24" : "#4b5563", minWidth: 20 }}>{idx === 0 ? "🥇" : `${idx+1}.`}</span>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#f9fafb" }}>{name}</p>
+                          <p style={{ margin: 0, fontSize: 11, color }}>{group}</p>
+                        </div>
+                        <span style={{ fontSize: 16, fontWeight: 800, color: "#a3e635" }}>{weight}kg</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ── AI ANALYSIS ── */}
+            <div style={{ background: "#111827", borderRadius: 16, padding: 16, marginBottom: 12, border: "1px solid #a3e63533" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#a3e635", textTransform: "uppercase", letterSpacing: "1px" }}>🤖 Análise do seu coach IA</p>
+                <button onClick={generateAI} disabled={aiLoading} style={{ background: "#1f2937", border: "none", borderRadius: 8, padding: "6px 10px", cursor: aiLoading ? "default" : "pointer", color: "#6b7280", fontSize: 11, fontWeight: 600 }}>
+                  {aiLoading ? "⏳" : "↺ Gerar"}
+                </button>
+              </div>
+              {aiLoading && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 0" }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#a3e635", animation: "pulse 1s infinite" }} />
+                  <span style={{ fontSize: 13, color: "#4b5563" }}>Analisando seus dados...</span>
+                </div>
+              )}
+              {aiError && <p style={{ margin: 0, fontSize: 13, color: "#ef4444" }}>{aiError}</p>}
+              {aiText && !aiLoading && (
+                <p style={{ margin: 0, fontSize: 14, color: "#d1d5db", lineHeight: 1.7 }}>{aiText}</p>
+              )}
+            </div>
+          </>
+        )}
+        <p style={{ margin: "16px 0 0", textAlign: "center", fontSize: 11, color: "#1f2937" }}>Criado por Thiago Camargo Betti</p>
+      </div>
+      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
+    </div>
+  );
+}
+
 // ── RESET SCREEN ──────────────────────────────────────────────────────────
 function ResetScreen({ onClose, onReset }) {
   const [confirm, setConfirm] = useState(false);
@@ -1127,6 +1416,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
   const [showMenu, setShowMenu] = useState(false);
   const [showNewWorkout, setShowNewWorkout] = useState(false);
   const [screen, setScreen] = useState("home"); // "home" | "workout"
+  const [showDashboard, setShowDashboard] = useState(false);
   const [newWorkoutName, setNewWorkoutName] = useState('');
   const [editingWorkoutId, setEditingWorkoutId] = useState(null);
   const [editingWorkoutName, setEditingWorkoutName] = useState('');
@@ -1323,6 +1613,8 @@ export default function WorkoutTracker({ userId, userEmail }) {
   }
 
   // ── HOME SCREEN ──────────────────────────────────────────────────────────
+  if (showDashboard) return <DashboardScreen history={history} workouts={workouts} onClose={() => setShowDashboard(false)} />;
+
   if (screen === "home") return (
     <div style={{ minHeight: "100vh", background: "#0a0f1a", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       {/* Fixed top */}
@@ -1386,6 +1678,11 @@ export default function WorkoutTracker({ userId, userEmail }) {
         <div style={{ marginTop: 24 }}>
           <p style={{ margin: "0 0 14px", fontSize: 12, color: "#4b5563", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.5px" }}>Ferramentas</p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <button onClick={() => setShowDashboard(true)} style={{ background: "#111827", border: "1.5px solid #a3e63533", borderRadius: 16, padding: "20px 16px", cursor: "pointer", textAlign: "left", display: "flex", flexDirection: "column", gap: 8, minHeight: 100, boxShadow: "0 0 20px #a3e63511" }}>
+              <span style={{ fontSize: 24 }}>🤖</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: "#a3e635" }}>Dashboard IA</span>
+              <span style={{ fontSize: 11, color: "#4b5563" }}>Insights do treino</span>
+            </button>
             <button onClick={() => setShowHistory(true)} style={{ background: "#111827", border: "1px solid #1f2937", borderRadius: 16, padding: "20px 16px", cursor: "pointer", textAlign: "left", display: "flex", flexDirection: "column", gap: 8, minHeight: 100 }}>
               <span style={{ fontSize: 24 }}>📊</span>
               <span style={{ fontSize: 14, fontWeight: 700, color: "#f9fafb" }}>Histórico</span>
