@@ -447,7 +447,6 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
   const fullyDone = doneSets === totalSets;
   const [restingSet, setRestingSet] = useState(null);
   const [editing, setEditing] = useState(false);
-  const [editName, setEditName] = useState(exercise.name);
   const [editSets, setEditSets] = useState(exercise.sets);
   const [editReps, setEditReps] = useState(exercise.reps);
   const [editRest, setEditRest] = useState(exercise.restTime ?? 90);
@@ -476,7 +475,6 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
   const [menuOpen, setMenuOpen] = useState(false);
 
   const openEdit = () => {
-    setEditName(exercise.name);
     setEditSets(exercise.sets);
     setEditReps(exercise.reps);
     setEditRest(exercise.restTime ?? 90);
@@ -485,8 +483,7 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
   };
 
   const saveEdit = () => {
-    const name = editName.trim() || exercise.name;
-    onUpdateExercise(exercise.id, { name, sets: editSets, reps: editReps, restTime: editRest });
+    onUpdateExercise(exercise.id, { sets: editSets, reps: editReps, restTime: editRest });
     setEditing(false);
   };
 
@@ -591,18 +588,6 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
       {/* ── EDIT PANEL ── */}
       {editing && (
         <div style={{ margin: "4px 16px 14px", background: "#0d1524", borderRadius: 12, padding: "14px 14px 16px", border: `1px solid ${color}33` }}>
-          <p style={{ margin: "0 0 6px", fontSize: 10, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.8px" }}>Nome</p>
-          <input
-            value={editName}
-            onChange={e => setEditName(e.target.value)}
-            autoFocus
-            style={{
-              width: "100%", background: "#1f2937", border: `1.5px solid ${color}55`,
-              borderRadius: 10, padding: "10px 12px", color: "#f9fafb",
-              fontSize: 14, fontWeight: 600, outline: "none",
-              boxSizing: "border-box", marginBottom: 14,
-            }}
-          />
           <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
             {[{ label: "Séries", val: editSets, set: setEditSets }, { label: "Reps", val: editReps, set: setEditReps }].map(({ label, val, set }) => (
               <div key={label} style={{ flex: 1, background: "#1f2937", borderRadius: 10, padding: "10px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
@@ -1231,6 +1216,266 @@ Faça uma análise motivadora e honesta: aponte o que está bom, identifique pad
   );
 }
 
+
+// ── HIIT SCREEN ───────────────────────────────────────────────────────────
+function HiitScreen({ onClose }) {
+  const PRESETS_WORK = [20, 30, 40, 45, 60];
+  const PRESETS_REST = [10, 15, 20, 30, 45];
+
+  const [workTime, setWorkTime] = useState(40);
+  const [restTime, setRestTime] = useState(20);
+  const [phase, setPhase] = useState(null); // null | "work" | "rest"
+  const [remaining, setRemaining] = useState(0);
+  const [round, setRound] = useState(0);
+  const [running, setRunning] = useState(false);
+  const intervalRef = useRef(null);
+  const startTsRef = useRef(null);
+  const durationRef = useRef(0);
+
+  // Derived
+  const isWork = phase === "work";
+  const isRest = phase === "rest";
+  const total = phase === "work" ? workTime : restTime;
+  const progress = total > 0 ? remaining / total : 0;
+
+  // Reliable tick: anchored to wall-clock, not setInterval drift
+  function tick() {
+    const elapsed = Math.floor((Date.now() - startTsRef.current) / 1000);
+    const left = durationRef.current - elapsed;
+    if (left <= 0) {
+      flip();
+    } else {
+      setRemaining(left);
+    }
+  }
+
+  function startPhase(p, duration, roundNum) {
+    clearInterval(intervalRef.current);
+    setPhase(p);
+    setRemaining(duration);
+    setRound(roundNum);
+    durationRef.current = duration;
+    startTsRef.current = Date.now();
+    intervalRef.current = setInterval(tick, 250);
+  }
+
+  function flip() {
+    clearInterval(intervalRef.current);
+    setPhase(prev => {
+      const next = prev === "work" ? "rest" : "work";
+      const dur = next === "work" ? workTime : restTime;
+      const nextRound = next === "work" ? round + 1 : round;
+      setTimeout(() => startPhase(next, dur, nextRound), 0);
+      return next;
+    });
+  }
+
+  function handleStart() {
+    setRunning(true);
+    startPhase("work", workTime, 1);
+  }
+
+  function handleStop() {
+    clearInterval(intervalRef.current);
+    setRunning(false);
+    setPhase(null);
+    setRemaining(0);
+    setRound(0);
+  }
+
+  useEffect(() => () => clearInterval(intervalRef.current), []);
+
+  const fmtSec = s => s >= 60
+    ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`
+    : String(Math.max(0, s));
+
+  // Colors
+  const BG_WORK = "#0a1f0a";
+  const BG_REST = "#0a0f1a";
+  const COLOR_WORK = "#a3e635";
+  const COLOR_REST = "#3b82f6";
+  const phaseColor = isWork ? COLOR_WORK : isRest ? COLOR_REST : COLOR_WORK;
+  const phaseBg = isWork ? BG_WORK : BG_REST;
+
+  // Ring
+  const SIZE = 240;
+  const R = 106;
+  const circ = 2 * Math.PI * R;
+  const dashOffset = circ * (1 - progress);
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: running ? phaseBg : "#0a0f1a",
+      fontFamily: "system-ui, -apple-system, sans-serif",
+      display: "flex", flexDirection: "column",
+      transition: "background 0.4s",
+    }}>
+      {/* Header */}
+      <div style={{ padding: "calc(env(safe-area-inset-top) + 16px) 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: "#a3e635", letterSpacing: "3px" }}>TRAINEFY</p>
+          <h1 style={{ margin: "2px 0 0", fontSize: 24, fontWeight: 800, color: "#f9fafb" }}>⚡ HIIT</h1>
+        </div>
+        <button onClick={() => { handleStop(); onClose(); }} style={{ background: "#1f2937", border: "none", borderRadius: 10, padding: "10px 16px", cursor: "pointer", color: "#9ca3af", fontSize: 13, fontWeight: 600 }}>← Voltar</button>
+      </div>
+
+      {/* Setup — shown when not running */}
+      {!running && (
+        <div style={{ padding: "32px 20px 0", display: "flex", flexDirection: "column", gap: 20 }}>
+          {/* Work time */}
+          <div style={{ background: "#111827", borderRadius: 16, padding: 20, border: "1px solid #a3e63533" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <div>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: "#a3e635", textTransform: "uppercase", letterSpacing: "1px" }}>🏃 Treino</p>
+                <p style={{ margin: "2px 0 0", fontSize: 22, fontWeight: 800, color: "#f9fafb" }}>{workTime}s</p>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => setWorkTime(v => Math.max(5, v - 5))} style={{ width: 40, height: 40, borderRadius: 10, background: "#1f2937", border: "none", color: "#f9fafb", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                <button onClick={() => setWorkTime(v => v + 5)} style={{ width: 40, height: 40, borderRadius: 10, background: "#1f2937", border: "none", color: "#f9fafb", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              {PRESETS_WORK.map(s => (
+                <button key={s} onClick={() => setWorkTime(s)} style={{
+                  flex: 1, padding: "7px 0", borderRadius: 8, cursor: "pointer",
+                  background: workTime === s ? "#a3e63533" : "#1f2937",
+                  border: `1.5px solid ${workTime === s ? "#a3e635" : "#374151"}`,
+                  color: workTime === s ? "#a3e635" : "#6b7280",
+                  fontSize: 12, fontWeight: 700,
+                }}>{s}s</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Rest time */}
+          <div style={{ background: "#111827", borderRadius: 16, padding: 20, border: "1px solid #3b82f633" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <div>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: "#3b82f6", textTransform: "uppercase", letterSpacing: "1px" }}>💤 Descanso</p>
+                <p style={{ margin: "2px 0 0", fontSize: 22, fontWeight: 800, color: "#f9fafb" }}>{restTime}s</p>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => setRestTime(v => Math.max(5, v - 5))} style={{ width: 40, height: 40, borderRadius: 10, background: "#1f2937", border: "none", color: "#f9fafb", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                <button onClick={() => setRestTime(v => v + 5)} style={{ width: 40, height: 40, borderRadius: 10, background: "#1f2937", border: "none", color: "#f9fafb", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              {PRESETS_REST.map(s => (
+                <button key={s} onClick={() => setRestTime(s)} style={{
+                  flex: 1, padding: "7px 0", borderRadius: 8, cursor: "pointer",
+                  background: restTime === s ? "#3b82f633" : "#1f2937",
+                  border: `1.5px solid ${restTime === s ? "#3b82f6" : "#374151"}`,
+                  color: restTime === s ? "#3b82f6" : "#6b7280",
+                  fontSize: 12, fontWeight: 700,
+                }}>{s}s</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Play button */}
+          <button onClick={handleStart} style={{
+            width: "100%", background: "#a3e635", border: "none",
+            borderRadius: 16, padding: "20px 0", cursor: "pointer",
+            fontSize: 18, fontWeight: 900, color: "#0a0a0a",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+            marginTop: 4,
+          }}>
+            <span style={{ fontSize: 22 }}>▶</span> Iniciar HIIT
+          </button>
+        </div>
+      )}
+
+      {/* Active timer */}
+      {running && (
+        <div style={{
+          flex: 1, display: "flex", flexDirection: "column",
+          alignItems: "center", justifyContent: "center",
+          padding: "20px 20px calc(env(safe-area-inset-bottom) + 40px)",
+          gap: 0,
+        }}>
+          {/* Phase label */}
+          <p style={{
+            margin: "0 0 8px", fontSize: 13, fontWeight: 900,
+            color: phaseColor, letterSpacing: "4px", textTransform: "uppercase",
+            opacity: 0.9,
+          }}>
+            {isWork ? "🏃 TREINO" : "💤 DESCANSO"}
+          </p>
+
+          {/* Round counter */}
+          <p style={{ margin: "0 0 32px", fontSize: 13, color: "#4b5563", fontWeight: 600 }}>
+            Rodada {round}
+          </p>
+
+          {/* Ring */}
+          <div style={{ position: "relative", width: SIZE, height: SIZE, marginBottom: 40 }}>
+            <svg width={SIZE} height={SIZE} style={{ transform: "rotate(-90deg)" }}>
+              {/* track */}
+              <circle cx={SIZE/2} cy={SIZE/2} r={R} fill="none" stroke="#1f2937" strokeWidth={10} />
+              {/* progress */}
+              <circle
+                cx={SIZE/2} cy={SIZE/2} r={R}
+                fill="none"
+                stroke={phaseColor}
+                strokeWidth={10}
+                strokeDasharray={circ}
+                strokeDashoffset={dashOffset}
+                strokeLinecap="round"
+                style={{ transition: "stroke-dashoffset 0.22s linear, stroke 0.4s" }}
+              />
+            </svg>
+            {/* Center content */}
+            <div style={{
+              position: "absolute", inset: 0,
+              display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center", gap: 4,
+            }}>
+              <span style={{
+                fontSize: remaining >= 10 ? 72 : 80,
+                fontWeight: 900, color: phaseColor,
+                fontVariantNumeric: "tabular-nums",
+                lineHeight: 1,
+                transition: "color 0.4s",
+              }}>
+                {fmtSec(remaining)}
+              </span>
+              <span style={{ fontSize: 12, color: "#4b5563", fontWeight: 600 }}>
+                {isWork ? `descanso em ${remaining}s` : `treino em ${remaining}s`}
+              </span>
+            </div>
+          </div>
+
+          {/* Next phase preview */}
+          <div style={{
+            background: "#111827", borderRadius: 14,
+            padding: "12px 24px", border: `1px solid ${phaseColor}22`,
+            marginBottom: 32, textAlign: "center",
+          }}>
+            <p style={{ margin: 0, fontSize: 11, color: "#4b5563", fontWeight: 600, textTransform: "uppercase", letterSpacing: "1px" }}>A seguir</p>
+            <p style={{ margin: "4px 0 0", fontSize: 15, fontWeight: 800, color: isWork ? COLOR_REST : COLOR_WORK }}>
+              {isWork ? `💤 Descanso — ${restTime}s` : `🏃 Treino — ${workTime}s`}
+            </p>
+          </div>
+
+          {/* Stop button */}
+          <button onClick={handleStop} style={{
+            background: "#1f2937", border: "1.5px solid #374151",
+            borderRadius: 14, padding: "16px 40px", cursor: "pointer",
+            color: "#6b7280", fontSize: 15, fontWeight: 700,
+          }}>
+            ■ Parar
+          </button>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+      `}</style>
+    </div>
+  );
+}
+
 // ── RESET SCREEN ──────────────────────────────────────────────────────────
 function ResetScreen({ onClose, onReset }) {
   const [confirm, setConfirm] = useState(false);
@@ -1286,114 +1531,6 @@ function ResetScreen({ onClose, onReset }) {
         </div>
       </div>
       <Copyright />
-    </div>
-  );
-}
-
-
-// ── CLAUDE IMPORT TIP ─────────────────────────────────────────────────────
-function ClaudeImportTip() {
-  const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  const PROMPT = `Vou te enviar dois arquivos:
-1. A planilha modelo do Trainefy (trainefy_modelo.csv)
-2. Meu treino atual (pode ser uma foto, PDF, texto ou planilha)
-
-Por favor, monte uma planilha CSV no mesmo formato do modelo, com os meus exercícios organizados corretamente.
-
-Regras importantes:
-- A coluna "Treino" deve ter o nome de cada treino (ex: Treino A, Peito e Tríceps)
-- A coluna "Grupo" deve usar exatamente um destes valores: Peito, Costas, Quadríceps, Post. Coxa, Glúteos, Panturrilha, Bíceps, Tríceps, Ombros, Trapézio, Antebraço, Core
-- A coluna "Descanso (seg)" deve ser o tempo de descanso em segundos (ex: 90)
-- Não adicione colunas extras, não mude os nomes das colunas
-- Retorne apenas o conteúdo CSV puro, sem explicações, sem blocos de código markdown`;
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(PROMPT).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    }).catch(() => {
-      const ta = document.createElement("textarea");
-      ta.value = PROMPT;
-      ta.style.cssText = "position:fixed;opacity:0";
-      document.body.appendChild(ta);
-      ta.focus(); ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    });
-  };
-
-  return (
-    <div style={{ background: "#111827", borderRadius: 16, border: "1px solid #1f2937", overflow: "hidden" }}>
-      <button
-        onClick={() => setOpen(v => !v)}
-        style={{
-          width: "100%", background: "none", border: "none",
-          padding: "16px 20px", cursor: "pointer",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 20 }}>🤖</span>
-          <div style={{ textAlign: "left" }}>
-            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#f9fafb" }}>Usar o Claude para montar a planilha</p>
-            <p style={{ margin: "2px 0 0", fontSize: 12, color: "#6b7280" }}>Deixe o Claude fazer o trabalho pesado</p>
-          </div>
-        </div>
-        <span style={{
-          fontSize: 11, color: "#6b7280", fontWeight: 700,
-          display: "inline-block",
-          transform: open ? "rotate(180deg)" : "rotate(0deg)",
-          transition: "transform 0.2s",
-        }}>▼</span>
-      </button>
-
-      {open && (
-        <div style={{ padding: "0 20px 20px", borderTop: "1px solid #1a2234" }}>
-          <div style={{ paddingTop: 16, display: "flex", flexDirection: "column", gap: 10 }}>
-            {[
-              { n: "1", text: "Baixe a planilha modelo (Passo 1 acima)" },
-              { n: "2", text: "Abra o claude.ai e inicie uma conversa nova" },
-              { n: "3", text: "Envie a planilha modelo + seu treino atual (foto, PDF, print ou texto)" },
-              { n: "4", text: "Cole o prompt abaixo na mesma mensagem e envie" },
-              { n: "5", text: "Baixe o CSV gerado pelo Claude e faça upload aqui no Passo 2" },
-            ].map(({ n, text }) => (
-              <div key={n} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                <span style={{
-                  width: 22, height: 22, borderRadius: "50%",
-                  background: "#a3e63522", color: "#a3e635",
-                  fontSize: 11, fontWeight: 800, flexShrink: 0,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>{n}</span>
-                <p style={{ margin: 0, fontSize: 13, color: "#d1d5db", lineHeight: 1.5 }}>{text}</p>
-              </div>
-            ))}
-
-            <button
-              onClick={handleCopy}
-              style={{
-                marginTop: 6,
-                width: "100%", background: copied ? "#a3e63522" : "#1f2937",
-                border: `1.5px solid ${copied ? "#a3e635" : "#374151"}`,
-                borderRadius: 12, padding: "14px 0", cursor: "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                fontSize: 14, fontWeight: 700,
-                color: copied ? "#a3e635" : "#f9fafb",
-                transition: "all 0.2s",
-              }}
-            >
-              {copied ? "✓ Prompt copiado!" : "📋 Copiar prompt para o Claude"}
-            </button>
-
-            <p style={{ margin: 0, fontSize: 11, color: "#4b5563", textAlign: "center", lineHeight: 1.5 }}>
-              O Claude monta a planilha no formato correto automaticamente.
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -1590,9 +1727,6 @@ function ImportScreen({ onClose, onImport }) {
             </table>
           </div>
         </div>
-
-        {/* Dica Claude — expansível */}
-        <ClaudeImportTip />
       </div>
       <Copyright />
     </div>
@@ -1629,6 +1763,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
   const [showNewWorkout, setShowNewWorkout] = useState(false);
   const [screen, setScreen] = useState("home"); // "home" | "workout"
   const [showDashboard, setShowDashboard] = useState(false);
+  const [showHiit, setShowHiit] = useState(false);
   const [newWorkoutName, setNewWorkoutName] = useState('');
   const [editingWorkoutId, setEditingWorkoutId] = useState(null);
   const [editingWorkoutName, setEditingWorkoutName] = useState('');
@@ -1835,6 +1970,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
   );
 
   if (showDashboard) return <DashboardScreen history={history} workouts={workouts} onClose={() => setShowDashboard(false)} />;
+  if (showHiit) return <HiitScreen onClose={() => setShowHiit(false)} />;
 
   if (screen === "home") return (
     <div style={{ minHeight: "100vh", background: "#0a0f1a", fontFamily: "system-ui, -apple-system, sans-serif" }}>
@@ -1903,6 +2039,11 @@ export default function WorkoutTracker({ userId, userEmail }) {
               <span style={{ fontSize: 24 }}>🤖</span>
               <span style={{ fontSize: 14, fontWeight: 700, color: "#a3e635" }}>Dashboard IA</span>
               <span style={{ fontSize: 11, color: "#4b5563" }}>Insights do treino</span>
+            </button>
+            <button onClick={() => setShowHiit(true)} style={{ background: "#111827", border: "1.5px solid #f9731633", borderRadius: 16, padding: "20px 16px", cursor: "pointer", textAlign: "left", display: "flex", flexDirection: "column", gap: 8, minHeight: 100, boxShadow: "0 0 20px #f9731611" }}>
+              <span style={{ fontSize: 24 }}>⚡</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: "#f97316" }}>HIIT</span>
+              <span style={{ fontSize: 11, color: "#4b5563" }}>Timer intervalado</span>
             </button>
             <button onClick={() => setShowHistory(true)} style={{ background: "#111827", border: "1px solid #1f2937", borderRadius: 16, padding: "20px 16px", cursor: "pointer", textAlign: "left", display: "flex", flexDirection: "column", gap: 8, minHeight: 100 }}>
               <span style={{ fontSize: 24 }}>📊</span>
@@ -1995,9 +2136,9 @@ export default function WorkoutTracker({ userId, userEmail }) {
               {exercises.length > 0 && <span style={{ fontSize: 12, color: "#a3e635", fontWeight: 700 }}>{doneCount}/{exercises.length} séries</span>}
             </div>
             {sessionActive && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#a3e63522", borderRadius: 20, padding: "4px 10px", border: "1px solid #a3e63533" }}>
-                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#a3e635", display: "inline-block", animation: "pulse 1.5s infinite" }} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#a3e635", letterSpacing: "0.3px" }}>em treino</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#a3e63522", borderRadius: 20, padding: "4px 12px" }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#a3e635", animation: "pulse 1.5s infinite" }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#a3e635" }}>{fmtTime(elapsed)}</span>
               </div>
             )}
           </div>
