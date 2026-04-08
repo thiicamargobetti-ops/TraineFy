@@ -1523,9 +1523,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
             <span style={{ fontSize: 18 }}>+</span> Exercício
           </button>
         )}
-      </div>{/* end bottom bar */}
-
-    </div>{/* end root */}
+      </div>
 
       <style>{`
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
@@ -1536,5 +1534,6 @@ export default function WorkoutTracker({ userId, userEmail }) {
       `}</style>
 
       {showPicker && <PickerModal onClose={() => setShowPicker(false)} onAdd={addExercise} />}
+    </div>
   );
 }
