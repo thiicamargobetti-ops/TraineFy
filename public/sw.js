@@ -1,14 +1,20 @@
-// TraineFy Service Worker — push notifications locais
-// DEVE estar em public/sw.js para ser servido corretamente
+// TraineFy Service Worker — push notifications com tela bloqueada
+// ARQUIVO DEVE ESTAR EM: public/sw.js
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", e => e.waitUntil(self.clients.claim()));
 
-// Recebe postMessage do app e dispara notificação via SW
-// Isso garante funcionamento com tela bloqueada em todos os browsers
+// Permite que o app force atualização do SW
 self.addEventListener("message", e => {
+  if (e.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+    return;
+  }
+
+  // Dispara notificação via SW — único método que funciona com tela bloqueada
   if (e.data?.type === "PUSH") {
     const { title, body } = e.data;
+    // e.waitUntil garante que o SW não é encerrado antes da notificação ser exibida
     e.waitUntil(
       self.registration.showNotification(title, {
         body,

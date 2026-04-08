@@ -1246,6 +1246,256 @@ Faça uma análise motivadora e honesta: aponte o que está bom, identifique pad
   );
 }
 
+
+// ── HIIT SCREEN ───────────────────────────────────────────────────────────
+function HiitScreen({ onClose }) {
+  const PRESETS_WORK   = [20, 30, 40, 45, 60];
+  const PRESETS_REST   = [10, 15, 20, 30, 45];
+  const PRESETS_ROUNDS = [4, 6, 8, 10, 12];
+
+  const [workTime,     setWorkTime]     = useState(40);
+  const [restTime,     setRestTime]     = useState(20);
+  const [totalRounds,  setTotalRounds]  = useState(8);
+  const [phase,        setPhase]        = useState(null); // null|"work"|"rest"|"done"
+  const [remaining,    setRemaining]    = useState(0);
+  const [round,        setRound]        = useState(0);
+  const [running,      setRunning]      = useState(false);
+
+  const intervalRef    = useRef(null);
+  const startTsRef     = useRef(null);
+  const durationRef    = useRef(0);
+  const phaseRef       = useRef(null);
+  const roundRef       = useRef(0);
+  const workTimeRef    = useRef(40);
+  const restTimeRef    = useRef(20);
+  const totalRoundsRef = useRef(8);
+
+  useEffect(() => { workTimeRef.current    = workTime;    }, [workTime]);
+  useEffect(() => { restTimeRef.current    = restTime;    }, [restTime]);
+  useEffect(() => { totalRoundsRef.current = totalRounds; }, [totalRounds]);
+
+  function tick() {
+    const elapsed = Math.floor((Date.now() - startTsRef.current) / 1000);
+    const left = durationRef.current - elapsed;
+    if (left <= 0) advance(); else setRemaining(left);
+  }
+
+  function startPhase(p, duration, r) {
+    clearInterval(intervalRef.current);
+    phaseRef.current    = p;
+    roundRef.current    = r;
+    durationRef.current = duration;
+    startTsRef.current  = Date.now();
+    setPhase(p); setRemaining(duration); setRound(r);
+    intervalRef.current = setInterval(tick, 200);
+  }
+
+  function advance() {
+    clearInterval(intervalRef.current);
+    const cp  = phaseRef.current;
+    const cr  = roundRef.current;
+    const max = totalRoundsRef.current;
+    if (cp === "work") {
+      sendPushNotification("Hora de descansar 💤", `${restTimeRef.current}s — rodada ${cr} de ${max}`);
+      startPhase("rest", restTimeRef.current, cr);
+    } else {
+      const next = cr + 1;
+      if (next > max) {
+        clearInterval(intervalRef.current);
+        setPhase("done"); setRunning(false);
+        sendPushNotification("HIIT concluído 🏆", `${max} rodadas completas. Ótimo trabalho`);
+      } else {
+        sendPushNotification("Hora do treino 💪", `Rodada ${next} de ${max}`);
+        startPhase("work", workTimeRef.current, next);
+      }
+    }
+  }
+
+  async function handleStart() {
+    if ("Notification" in window && Notification.permission === "default") {
+      await Notification.requestPermission();
+    }
+    setRunning(true);
+    startPhase("work", workTime, 1);
+  }
+
+  function handleStop() {
+    clearInterval(intervalRef.current);
+    setRunning(false); setPhase(null); setRemaining(0); setRound(0);
+  }
+
+  useEffect(() => () => clearInterval(intervalRef.current), []);
+
+  const fmtSec = s => {
+    const v = Math.max(0, s);
+    return v >= 60 ? `${Math.floor(v/60)}:${String(v%60).padStart(2,"0")}` : String(v);
+  };
+
+  const isWork = phase === "work";
+  const isRest = phase === "rest";
+  const isDone = phase === "done";
+  const COLOR_WORK = "#a3e635";
+  const COLOR_REST = "#3b82f6";
+  const phaseColor = isWork ? COLOR_WORK : COLOR_REST;
+  const total = isWork ? workTime : isRest ? restTime : 1;
+  const progress = total > 0 ? Math.max(0, remaining) / total : 0;
+  const SIZE = 240, R = 106;
+  const circ = 2 * Math.PI * R;
+  const dashOffset = circ * (1 - progress);
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: isWork ? "#0a1a05" : isRest ? "#05101a" : "#0a0f1a",
+      fontFamily: "system-ui, -apple-system, sans-serif",
+      display: "flex", flexDirection: "column",
+      transition: "background 0.5s",
+    }}>
+      {/* Header */}
+      <div style={{ padding: "calc(env(safe-area-inset-top) + 16px) 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: "#a3e635", letterSpacing: "3px" }}>TRAINEFY</p>
+          <h1 style={{ margin: "2px 0 0", fontSize: 24, fontWeight: 800, color: "#f9fafb" }}>HIIT</h1>
+        </div>
+        <button onClick={() => { handleStop(); onClose(); }} style={{ background: "#1f2937", border: "none", borderRadius: 10, padding: "10px 16px", cursor: "pointer", color: "#9ca3af", fontSize: 13, fontWeight: 600 }}>← Voltar</button>
+      </div>
+
+      {/* SETUP */}
+      {!running && !isDone && (
+        <div style={{ padding: "28px 20px", display: "flex", flexDirection: "column", gap: 16, paddingBottom: "calc(env(safe-area-inset-bottom) + 24px)", overflowY: "auto" }}>
+
+          {/* Work */}
+          <div style={{ background: "#111827", borderRadius: 16, padding: 18, border: "1px solid #a3e63533" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <div>
+                <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: "#a3e635", textTransform: "uppercase", letterSpacing: "1px" }}>Treino</p>
+                <p style={{ margin: "2px 0 0", fontSize: 26, fontWeight: 900, color: "#f9fafb" }}>{workTime}s</p>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => setWorkTime(v => Math.max(5, v - 5))} style={{ width: 40, height: 40, borderRadius: 10, background: "#1f2937", border: "none", color: "#f9fafb", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                <button onClick={() => setWorkTime(v => v + 5)} style={{ width: 40, height: 40, borderRadius: 10, background: "#1f2937", border: "none", color: "#f9fafb", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent:: "center" }}>+</button>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              {PRESETS_WORK.map(s => (
+                <button key={s} onClick={() => setWorkTime(s)} style={{ flex: 1, padding: "7px 0", borderRadius: 8, cursor: "pointer", background: workTime === s ? "#a3e63533" : "#1f2937", border: `1.5px solid ${workTime === s ? "#a3e635" : "#374151"}`, color: workTime === s ? "#a3e635" : "#6b7280", fontSize: 12, fontWeight: 700 }}>{s}s</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Rest */}
+          <div style={{ background: "#111827", borderRadius: 16, padding: 18, border: "1px solid #3b82f633" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <div>
+                <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: "#3b82f6", textTransform: "uppercase", letterSpacing: "1px" }}>Descanso</p>
+                <p style={{ margin: "2px 0 0", fontSize: 26, fontWeight: 900, color: "#f9fafb" }}>{restTime}s</p>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => setRestTime(v => Math.max(5, v - 5))} style={{ width: 40, height: 40, borderRadius: 10, background: "#1f2937", border: "none", color: "#f9fafb", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                <button onClick={() => setRestTime(v => v + 5)} style={{ width: 40, height: 40, borderRadius: 10, background: "#1f2937", border: "none", color: "#f9fafb", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              {PRESETS_REST.map(s => (
+                <button key={s} onClick={() => setRestTime(s)} style={{ flex: 1, padding: "7px 0", borderRadius: 8, cursor: "pointer", background: restTime === s ? "#3b82f633" : "#1f2937", border: `1.5px solid ${restTime === s ? "#3b82f6" : "#374151"}`, color: restTime === s ? "#3b82f6" : "#6b7280", fontSize: 12, fontWeight: 700 }}>{s}s</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Rounds */}
+          <div style={{ background: "#111827", borderRadius: 16, padding: 18, border: "1px solid #f9731633" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <div>
+                <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: "#f97316", textTransform: "uppercase", letterSpacing: "1px" }}>Séries</p>
+                <p style={{ margin: "2px 0 0", fontSize: 26, fontWeight: 900, color: "#f9fafb" }}>{totalRounds}</p>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => setTotalRounds(v => Math.max(1, v - 1))} style={{ width: 40, height: 40, borderRadius: 10, background: "#1f2937", border: "none", color: "#f9fafb", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                <button onClick={() => setTotalRounds(v => v + 1)} style={{ width: 40, height: 40, borderRadius: 10, background: "#1f2937", border: "none", color: "#f9fafb", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              {PRESETS_ROUNDS.map(n => (
+                <button key={n} onClick={() => setTotalRounds(n)} style={{ flex: 1, padding: "7px 0", borderRadius: 8, cursor: "pointer", background: totalRounds === n ? "#f9731633" : "#1f2937", border: `1.5px solid ${totalRounds === n ? "#f97316" : "#374151"}`, color: totalRounds === n ? "#f97316" : "#6b7280", fontSize: 12, fontWeight: 700 }}>{n}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Summary */}
+          <div style={{ background: "#111827", borderRadius: 14, padding: "14px 20px", border: "1px solid #1f2937", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <p style={{ margin: 0, fontSize: 12, color: "#4b5563" }}>Duração estimada</p>
+              <p style={{ margin: "2px 0 0", fontSize: 18, fontWeight: 800, color: "#f9fafb" }}>
+                {Math.floor(((workTime + restTime) * totalRounds) / 60)}min {((workTime + restTime) * totalRounds) % 60}s
+              </p>
+            </div>
+            <p style={{ margin: 0, fontSize: 13, color: "#4b5563" }}>{totalRounds}× ({workTime}s + {restTime}s)</p>
+          </div>
+
+          <button onClick={handleStart} style={{ width: "100%", background: "#a3e635", border: "none", borderRadius: 16, padding: "20px 0", cursor: "pointer", fontSize: 18, fontWeight: 900, color: "#0a0a0a", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+            <span style={{ fontSize: 22 }}>▶</span> Iniciar HIIT
+          </button>
+        </div>
+      )}
+
+      {/* TIMER ATIVO */}
+      {running && (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "20px 20px calc(env(safe-area-inset-bottom) + 40px)" }}>
+          <p style={{ margin: "0 0 4px", fontSize: 44, fontWeight: 900, color: phaseColor, letterSpacing: "3px", textTransform: "uppercase", transition: "color 0.4s" }}>
+            {isWork ? "TREINO" : "DESCANSO"}
+          </p>
+          <p style={{ margin: "0 0 32px", fontSize: 14, color: "#4b5563", fontWeight: 700 }}>
+            Rodada {round} de {totalRounds}
+          </p>
+
+          {/* Ring */}
+          <div style={{ position: "relative", width: SIZE, height: SIZE, marginBottom: 36 }}>
+            <svg width={SIZE} height={SIZE} style={{ transform: "rotate(-90deg)" }}>
+              <circle cx={SIZE/2} cy={SIZE/2} r={R} fill="none" stroke="#1f2937" strokeWidth={10} />
+              <circle cx={SIZE/2} cy={SIZE/2} r={R} fill="none" stroke={phaseColor} strokeWidth={10}
+                strokeDasharray={circ} strokeDashoffset={dashOffset} strokeLinecap="round"
+                style={{ transition: "stroke-dashoffset 0.18s linear, stroke 0.4s" }} />
+            </svg>
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ fontSize: 80, fontWeight: 900, color: "#f9fafb", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
+                {fmtSec(remaining)}
+              </span>
+            </div>
+          </div>
+
+          {/* Próxima fase */}
+          <div style={{ background: "#111827", borderRadius: 14, padding: "12px 28px", border: `1px solid ${phaseColor}22`, marginBottom: 32, textAlign: "center" }}>
+            <p style={{ margin: 0, fontSize: 11, color: "#4b5563", fontWeight: 600, textTransform: "uppercase", letterSpacing: "1px" }}>A seguir</p>
+            <p style={{ margin: "4px 0 0", fontSize: 16, fontWeight: 800, color: isWork ? COLOR_REST : COLOR_WORK }}>
+              {isWork ? `DESCANSO — ${restTime}s` : round < totalRounds ? `TREINO — ${workTime}s` : "FIM"}
+            </p>
+          </div>
+
+          <button onClick={handleStop} style={{ background: "#1f2937", border: "1.5px solid #374151", borderRadius: 14, padding: "16px 48px", cursor: "pointer", color: "#6b7280", fontSize: 15, fontWeight: 700 }}>
+            ■ Parar
+          </button>
+        </div>
+      )}
+
+      {/* CONCLUÍDO */}
+      {isDone && (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px calc(env(safe-area-inset-bottom) + 40px)", gap: 16, textAlign: "center" }}>
+          <span style={{ fontSize: 72 }}>🏆</span>
+          <p style={{ margin: 0, fontSize: 28, fontWeight: 900, color: "#f9fafb" }}>HIIT concluído</p>
+          <p style={{ margin: 0, fontSize: 15, color: "#4b5563" }}>
+            {totalRounds} rodadas · {Math.floor(((workTime + restTime) * totalRounds) / 60)}min {((workTime + restTime) * totalRounds) % 60}s
+          </p>
+          <button onClick={handleStop} style={{ marginTop: 16, background: "#a3e635", border: "none", borderRadius: 16, padding: "18px 48px", cursor: "pointer", fontSize: 16, fontWeight: 900, color: "#0a0a0a" }}>
+            Novo HIIT
+          </button>
+        </div>
+      )}
+
+      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
+    </div>
+  );
+}
+
 // ── RESET SCREEN ──────────────────────────────────────────────────────────
 function ResetScreen({ onClose, onReset }) {
   const [confirm, setConfirm] = useState(false);
@@ -1533,6 +1783,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
   const [showNewWorkout, setShowNewWorkout] = useState(false);
   const [screen, setScreen] = useState("home"); // "home" | "workout"
   const [showDashboard, setShowDashboard] = useState(false);
+  const [showHiit, setShowHiit] = useState(false);
   const [newWorkoutName, setNewWorkoutName] = useState('');
   const [editingWorkoutId, setEditingWorkoutId] = useState(null);
   const [editingWorkoutName, setEditingWorkoutName] = useState('');
@@ -1576,7 +1827,18 @@ export default function WorkoutTracker({ userId, userEmail }) {
 
       // Registrar SW para notificações com tela bloqueada
       if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register("/sw.js").catch(() => {});
+        navigator.serviceWorker.register("/sw.js").then(reg => {
+          // Se há um SW waiting (novo deploy), força ativação imediata
+          if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
+          reg.addEventListener("updatefound", () => {
+            const newSW = reg.installing;
+            if (newSW) newSW.addEventListener("statechange", () => {
+              if (newSW.state === "installed" && reg.waiting) {
+                reg.waiting.postMessage({ type: "SKIP_WAITING" });
+              }
+            });
+          });
+        }).catch(() => {});
       }
     }
     hydrate();
@@ -1747,6 +2009,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
   );
 
   if (showDashboard) return <DashboardScreen history={history} workouts={workouts} onClose={() => setShowDashboard(false)} />;
+  if (showHiit) return <HiitScreen onClose={() => setShowHiit(false)} />;
 
   if (screen === "home") return (
     <div style={{ minHeight: "100vh", background: "#0a0f1a", fontFamily: "system-ui, -apple-system, sans-serif" }}>
@@ -1815,6 +2078,11 @@ export default function WorkoutTracker({ userId, userEmail }) {
               <span style={{ fontSize: 24 }}>🤖</span>
               <span style={{ fontSize: 14, fontWeight: 700, color: "#a3e635" }}>Dashboard IA</span>
               <span style={{ fontSize: 11, color: "#4b5563" }}>Insights do treino</span>
+            </button>
+            <button onClick={() => setShowHiit(true)} style={{ background: "#111827", border: "1.5px solid #f9731633", borderRadius: 16, padding: "20px 16px", cursor: "pointer", textAlign: "left", display: "flex", flexDirection: "column", gap: 8, minHeight: 100, boxShadow: "0 0 20px #f9731611" }}>
+              <span style={{ fontSize: 24 }}>⚡</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: "#f97316" }}>HIIT</span>
+              <span style={{ fontSize: 11, color: "#4b5563" }}>Timer intervalado</span>
             </button>
             <button onClick={() => setShowHistory(true)} style={{ background: "#111827", border: "1px solid #1f2937", borderRadius: 16, padding: "20px 16px", cursor: "pointer", textAlign: "left", display: "flex", flexDirection: "column", gap: 8, minHeight: 100 }}>
               <span style={{ fontSize: 24 }}>📊</span>
