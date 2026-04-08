@@ -1404,7 +1404,7 @@ export default function WorkoutTracker({ userId, userEmail }) {
       </div>
 
       {/* ── SCROLLABLE LIST ── */}
-      <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "8px 20px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "8px 20px 16px", minHeight: 0 }}>
         {workouts.length === 0 ? (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", padding: "20px" }}>
             <div style={{ fontSize: 56 }}>🏋️</div>
@@ -1422,7 +1422,9 @@ export default function WorkoutTracker({ userId, userEmail }) {
             </p>
           </div>
         ) : exercises.map(ex => (
-          <ExerciseCard key={ex.id} exercise={ex} onRemove={removeExercise} onToggleSet={toggleSet} onUpdateSetWeight={updateSetWeight} onUpdateExercise={updateExercise} sessionActive={sessionActive} />
+          <div key={ex.id} style={{ marginBottom: 12 }}>
+            <ExerciseCard exercise={ex} onRemove={removeExercise} onToggleSet={toggleSet} onUpdateSetWeight={updateSetWeight} onUpdateExercise={updateExercise} sessionActive={sessionActive} />
+          </div>
         ))}
       </div>
 
