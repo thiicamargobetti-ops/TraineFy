@@ -1057,7 +1057,7 @@ Faça uma análise motivadora e honesta: aponte o que está bom, identifique pad
     setAiError(null);
     setAiText("");
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
