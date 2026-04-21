@@ -419,6 +419,20 @@ function sendPushNotification(title, body) {
   } catch (_) {}
 }
 
+// Agenda notificação no SW com timestamp exato — funciona com tela bloqueada
+// O setTimeout dentro do SW não é suspenso pelo browser como os da página
+function scheduleRestNotification(title, body, fireAt) {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  try {
+    navigator.serviceWorker.ready.then(reg => {
+      const target = reg.active || reg.waiting || reg.installing;
+      if (target) {
+        target.postMessage({ type: "PUSH_DELAYED", title, body, fireAt });
+      }
+    }).catch(() => {});
+  } catch (_) {}
+}
+
 // ── REST BAR — wall-clock based, survives background/reopen ─────────────
 // startedAt is a Date.now() timestamp saved at the moment the set was checked.
 // Each tick recomputes remaining = duration - elapsed, so losing focus or
@@ -489,7 +503,14 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
     }
     onToggleSet(exercise.id, i);
     if (sessionActive && exercise.restTime > 0) {
-      setRestingSet({ index: i, startedAt: Date.now() });
+      const startedAt = Date.now();
+      setRestingSet({ index: i, startedAt });
+      // Agenda no SW agora — antes da tela bloquear
+      scheduleRestNotification(
+        "Fim do descanso, hora da próxima série 💪",
+        exercise.name,
+        startedAt + exercise.restTime * 1000
+      );
     }
   };
 
@@ -703,10 +724,7 @@ function ExerciseCard({ exercise, onRemove, onToggleSet, onUpdateSetWeight, onUp
                   duration={exercise.restTime}
                   startedAt={restingSet?.startedAt ?? Date.now()}
                   color={color}
-                  onDone={() => {
-                    setRestingSet(null);
-                    sendPushNotification("Fim do descanso, hora da próxima série 💪", exercise.name);
-                  }}
+                  onDone={() => setRestingSet(null)}
                 />
               )}
             </div>
@@ -760,7 +778,7 @@ function HistoryScreen({ onClose, onDelete, history: historyProp }) {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "#0a0f1a", zIndex: 200, overflowY: "auto" }}>
-      <div style={{ padding: "20px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+      <div style={{ padding: "calc(env(safe-area-inset-top) + 16px) 20px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
         <div>
           <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: "#a3e635", letterSpacing: "2px", textTransform: "uppercase" }}>TRAINEFY</p>
           <h1 style={{ margin: "2px 0 0", fontSize: 26, fontWeight: 800, color: "#f9fafb" }}>📊 Histórico</h1>
@@ -1911,7 +1929,7 @@ function ResetScreen({ onClose, onReset }) {
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0f1a", fontFamily: "system-ui, sans-serif" }}>
-      <div style={{ padding: "20px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+      <div style={{ padding: "calc(env(safe-area-inset-top) + 16px) 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
         <div>
           <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: "#a3e635", letterSpacing: "3px" }}>TRAINEFY</p>
           <h1 style={{ margin: "4px 0 0", fontSize: 26, fontWeight: 800, color: "#f9fafb" }}>Zerar dados</h1>
@@ -2058,7 +2076,7 @@ function ImportScreen({ onClose, onImport }) {
   return (
     <div style={{ minHeight: "100vh", background: "#0a0f1a", fontFamily: "system-ui, sans-serif" }}>
       {/* Header */}
-      <div style={{ padding: "20px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+      <div style={{ padding: "calc(env(safe-area-inset-top) + 16px) 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
         <div>
           <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: "#a3e635", letterSpacing: "3px" }}>TRAINEFY</p>
           <h1 style={{ margin: "4px 0 0", fontSize: 26, fontWeight: 800, color: "#f9fafb" }}>Importar treino</h1>
